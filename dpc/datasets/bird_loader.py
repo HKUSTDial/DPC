@@ -9,7 +9,11 @@ class BirdLoader(BaseDataset):
 
     def get_item(self, index: int) -> TextToSQLItem:
         item = self.data[index]
+        # BIRD usually has a 'question_id' field
+        question_id = str(item.get("question_id", index))
+        
         return TextToSQLItem(
+            question_id=question_id,
             question=item["question"],
             db_id=item["db_id"],
             ground_truth=item.get("SQL", ""),

@@ -1,0 +1,19 @@
+[llm]
+model_name = "gpt-4o"
+temperature = 0.0
+max_tokens = 4096
+# api_key = "your-key-here"
+# base_url = "your-url-here"
+
+[pipeline]
+sql_timeout = 30
+epsilon = 0.05
+max_correction_attempts = 3
+
+[dataset]
+dataset_type = "spider"
+data_path = "data/spider/dev.json"
+db_root_path = "data/spider/database"
+pred_sqls_path = "data/spider/pred_sqls.json"
+output_path = "dpc_results.json"
+

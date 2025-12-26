@@ -8,6 +8,7 @@ from ..utils.schema_utils import SchemaExtractor, TableSchema
 @dataclass
 class TextToSQLItem:
     """Standardized data item for Text-to-SQL tasks."""
+    question_id: str
     question: str
     db_id: str
     ground_truth: str

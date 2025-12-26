@@ -35,12 +35,7 @@ class OpenAILLM(BaseLLM):
             
         self.client = openai.OpenAI(api_key=self.api_key, base_url=self.base_url)
 
-    def ask(self, prompt: str, system_prompt: Optional[str] = None) -> str:
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
+    def ask(self, messages: List[Dict[str, str]]) -> str:
         last_exception = None
         for attempt in range(self.max_retries):
             try:

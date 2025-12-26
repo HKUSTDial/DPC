@@ -1,6 +1,6 @@
 from typing import List, Dict, Any, Tuple, Set, Optional, Union
 from collections import Counter, defaultdict
-from ..utils.db_utils import execute_sql
+from .db_utils import execute_sql
 
 class ExecutionGroup:
     """

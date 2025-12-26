@@ -11,9 +11,10 @@ class BaseLLM(ABC):
         self.max_tokens = max_tokens
 
     @abstractmethod
-    def ask(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+    def ask(self, messages: List[Dict[str, str]]) -> str:
         """
-        Send a prompt to the LLM and return the response text.
+        Send a list of messages (multi-turn) to the LLM.
+        Returns the response text.
         Raises an exception if all retries fail.
         """
         pass
