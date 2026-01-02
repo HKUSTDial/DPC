@@ -50,7 +50,6 @@ def normalize_result(data: Any) -> List[Tuple[Any, ...]]:
         
     if isinstance(data, pd.DataFrame):
         # Convert DataFrame to list of tuples
-        # We use itertuples or values.tolist()
         rows = data.values.tolist()
     elif isinstance(data, list):
         rows = data
@@ -66,29 +65,41 @@ def normalize_result(data: Any) -> List[Tuple[Any, ...]]:
         
     return normalized_rows
 
+def canonicalize_result(rows: List[Tuple[Any, ...]]) -> List[Tuple[Any, ...]]:
+    """
+    Standardizes the result set for order-insensitive comparison.
+    1. Sorts rows (row-order insensitive) to handle non-ORDER BY queries.
+    2. Keeps column order intact (column-order SENSITIVE).
+    """
+    if not rows:
+        return []
+        
+    # Sort rows to make it row-order insensitive (multiset comparison).
+    # We use str(x) as the key to safely handle None and mixed types.
+    rows.sort(key=lambda x: str(x))
+    
+    return rows
+
 def calculate_row_match(predicted_row: Tuple[Any, ...], ground_truth_row: Tuple[Any, ...]) -> Tuple[float, float, float]:
     """
-    BIRD official logic: Calculate the matching percentage for a single row.
+    Calculate the matching percentage for a single row based on column position.
+    Strictly column-order sensitive.
     """
     if not ground_truth_row:
-        return 0.0, 1.0, 0.0
+        return (0.0, 1.0, 0.0) if predicted_row else (1.0, 0.0, 0.0)
         
     total_columns = len(ground_truth_row)
     matches = 0
-    element_in_pred_only = 0
-    element_in_truth_only = 0
     
-    # Check elements in predicted row
-    temp_gt = list(ground_truth_row)
-    for pred_val in predicted_row:
-        if pred_val in temp_gt:
+    # Strict positional matching
+    for i in range(min(len(predicted_row), total_columns)):
+        if predicted_row[i] == ground_truth_row[i]:
             matches += 1
-            temp_gt.remove(pred_val) # Remove to handle duplicates correctly
-        else:
-            element_in_pred_only += 1
             
-    # Elements in truth that were not matched
-    element_in_truth_only = len(temp_gt)
+    # False Positives: Columns in predicted that don't match or are extra
+    element_in_pred_only = len(predicted_row) - matches
+    # False Negatives: Columns in truth that were not matched
+    element_in_truth_only = total_columns - matches
     
     match_percentage = matches / total_columns
     pred_only_percentage = element_in_pred_only / total_columns
@@ -99,7 +110,7 @@ def calculate_row_match(predicted_row: Tuple[Any, ...], ground_truth_row: Tuple[
 def calculate_soft_f1(predicted: List[Tuple[Any, ...]], ground_truth: List[Tuple[Any, ...]]) -> float:
     """
     Calculates the Soft-F1 score between two result sets (List of Tuples).
-    Based on BIRD official evaluation logic.
+    Uses greedy matching to find the best correspondence between rows.
     """
     # Normalized empty check
     if not predicted and not ground_truth:
@@ -107,31 +118,48 @@ def calculate_soft_f1(predicted: List[Tuple[Any, ...]], ground_truth: List[Tuple
     if not predicted or not ground_truth:
         return 0.0
 
-    # Drop duplicates while preserving order (as per BIRD logic)
-    # Using dict.fromkeys to maintain order of first appearance
-    predicted = list(dict.fromkeys(predicted))
-    ground_truth = list(dict.fromkeys(ground_truth))
+    # Canonicalize results for robust comparison
+    predicted = canonicalize_result(predicted)
+    ground_truth = canonicalize_result(ground_truth)
 
     match_scores = []
     pred_only_scores = []
     truth_only_scores = []
     
-    # Calculate scores for pairs based on index
-    for i, gt_row in enumerate(ground_truth):
-        if i >= len(predicted):
+    temp_predicted = list(predicted)
+    
+    # Greedy matching to find the best pair for each ground truth row
+    for gt_row in ground_truth:
+        if not temp_predicted:
             match_scores.append(0.0)
+            pred_only_scores.append(0.0)
             truth_only_scores.append(1.0)
             continue
             
-        pred_row = predicted[i]
-        m, p, t = calculate_row_match(pred_row, gt_row)
-        match_scores.append(m)
-        pred_only_scores.append(p)
-        truth_only_scores.append(t)
+        best_m = -1.0
+        best_idx = 0
+        best_p = 0.0
+        best_t = 0.0
+        
+        # In sorted lists, the best match is likely to be at a similar position,
+        # but we check all to be sure for small synthetic sets.
+        for idx, pred_row in enumerate(temp_predicted):
+            m, p, t = calculate_row_match(pred_row, gt_row)
+            if m > best_m:
+                best_m = m
+                best_p = p
+                best_t = t
+                best_idx = idx
+            if m == 1.0: # Exact match
+                break
+        
+        match_scores.append(best_m)
+        pred_only_scores.append(best_p)
+        truth_only_scores.append(best_t)
+        temp_predicted.pop(best_idx)
 
-    # Handle remaining predicted rows
-    if len(predicted) > len(ground_truth):
-        for i in range(len(ground_truth), len(predicted)):
+        # Remaining predicted rows are false positives
+        for _ in temp_predicted:
             match_scores.append(0.0)
             pred_only_scores.append(1.0)
             truth_only_scores.append(0.0)

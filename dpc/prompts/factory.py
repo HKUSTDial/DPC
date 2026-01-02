@@ -1,7 +1,10 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from .slicer_prompts import SLICER_SYSTEM_PROMPT, SLICER_USER_PROMPT_TEMPLATE, SLICER_RETRY_PROMPT_TEMPLATE
 from .tester_prompts import TESTER_SYSTEM_PROMPT, TESTER_USER_PROMPT_TEMPLATE, TESTER_RETRY_PROMPT_TEMPLATE
 from .solver_prompts import SOLVER_SYSTEM_PROMPT, SOLVER_USER_PROMPT_TEMPLATE, SOLVER_RETRY_PROMPT_TEMPLATE
+
+if TYPE_CHECKING:
+    from ..utils.schema_utils import TableSchema
 
 class PromptFactory:
     """
@@ -71,7 +74,7 @@ class PromptFactory:
     @staticmethod
     def get_solver_prompt(
         question: str,
-        sliced_schema_text: str,
+        sliced_schema: Dict[str, "TableSchema"],
         test_data: Dict[str, List[Dict[str, Any]]],
         evidence: Optional[str] = None
     ) -> List[Dict[str, str]]:
@@ -79,27 +82,81 @@ class PromptFactory:
         Generates the initial messages for the PythonSolverAgent.
         """
         from tabulate import tabulate
+        import pandas as pd
         
         evidence_str = f"External Knowledge: {evidence}" if evidence else ""
-        df_names = ", ".join(test_data.keys())
         
-        # Format all test data into psql-style tables
-        table_strings = []
+        # 1. Database relationships (PK/FK) focusing only on sanitized names
+        rel_output = []
+        all_fks = []
+        for table_name, table in sliced_schema.items():
+            var_name = table_name.replace(" ", "_")
+            pk_info = f"Table {var_name} Primary Keys: {', '.join(table.primary_keys)}" if table.primary_keys else ""
+            if pk_info:
+                rel_output.append(pk_info)
+            if table.foreign_keys:
+                for fk in table.foreign_keys:
+                    to_table_var = fk.to_table.replace(" ", "_")
+                    all_fks.append(f"- {var_name}.{fk.from_col} -> {to_table_var}.{fk.to_col}")
+        if all_fks:
+            rel_output.append("\nForeign Key Relationships:")
+            rel_output.extend(all_fks)
+        relationships_text = "\n".join(rel_output)
+
+        # 2. Sanitize DataFrame variable names
+        df_variable_names = [name.replace(" ", "_") for name in test_data.keys()]
+        df_names_str = ", ".join(df_variable_names)
+        
+        # 3. Format all test data into sections: Types + Table
+        table_sections = []
         for table_name, rows in test_data.items():
+            var_name = table_name.replace(" ", "_")
+            section = [f"### DataFrame Variable: {var_name}"]
+            
             if rows:
-                headers = rows[0].keys()
-                data_rows = [[row[h] for h in headers] for row in rows]
-                table_str = f"Table: {table_name}\n" + tabulate(data_rows, headers=headers, tablefmt="psql")
-                table_strings.append(table_str)
-            else:
-                table_strings.append(f"Table: {table_name} (Empty)")
+                # Add Types & Descriptions
+                df = pd.DataFrame(rows)
+                table_schema = sliced_schema.get(table_name)
+                type_lines = []
+                for col, dtype in df.dtypes.items():
+                    desc_parts = []
+                    if table_schema and col in table_schema.columns:
+                        col_schema = table_schema.columns[col]
+                        if col_schema.description:
+                            desc_parts.append(f"Column Description: {col_schema.description}")
+                        if col_schema.value_description:
+                            desc_parts.append(f"Value Description: {col_schema.value_description}")
+                    
+                    desc_str = f" | {' | '.join(desc_parts)}" if desc_parts else ""
+                    type_lines.append(f"  - {col} ({dtype}){desc_str}")
                 
-        test_data_tables = "\n\n".join(table_strings)
+                section.append("Column Details:\n" + "\n".join(type_lines))
+                
+                # Add Table (Prioritize PK columns at the front)
+                original_headers = list(rows[0].keys())
+                table_schema = sliced_schema.get(table_name)
+                pk_cols = table_schema.primary_keys if table_schema else []
+                
+                # Build reordered headers: PKs first, then others
+                new_headers = [c for c in original_headers if c in pk_cols]
+                new_headers += [c for c in original_headers if c not in pk_cols]
+                
+                data_rows = []
+                for row in rows:
+                    data_rows.append([row.get(h) for h in new_headers])
+                table_str = tabulate(data_rows, headers=new_headers, tablefmt="psql")
+                section.append("All Data Rows:\n" + table_str)
+            else:
+                section.append("(Empty)")
+                
+            table_sections.append("\n".join(section))
+                
+        combined_test_data = "\n\n" + "\n\n".join(table_sections)
             
         user_prompt = SOLVER_USER_PROMPT_TEMPLATE.format(
-            sliced_schema=sliced_schema_text,
-            test_data_tables=test_data_tables,
-            df_names=df_names,
+            relationships=relationships_text,
+            test_data_with_types=combined_test_data,
+            df_names=df_names_str,
             question=question,
             evidence_str=evidence_str
         )

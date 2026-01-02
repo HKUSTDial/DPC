@@ -1,56 +1,21 @@
 import pandas as pd
 import traceback
-import multiprocessing
-import queue
-from typing import Dict, List, Any, Union, Optional
+import sys
+import logging
+import threading
+from typing import Dict, List, Any
 
-def _worker(test_data, code, out_queue):
-    """
-    Internal worker function to run in a separate process.
-    """
-    # 1. Prepare local namespace
-    local_vars = {"pd": pd}
-    for table_name, rows in test_data.items():
-        local_vars[table_name] = pd.DataFrame(rows)
-
-    try:
-        # 2. Execute
-        # Note: We use a limited globals dict for basic safety
-        exec(code, {"pd": pd, "__builtins__": __builtins__}, local_vars)
-        
-        if "result" not in local_vars:
-            out_queue.put(("error", "Error: The code did not define a 'result' variable."))
-            return
-        
-        result = local_vars["result"]
-        
-        # 3. Enforce DataFrame check & Conversion
-        if not isinstance(result, pd.DataFrame):
-            try:
-                if isinstance(result, (list, dict, int, float, str)):
-                    result = pd.DataFrame(result) if isinstance(result, (list, dict)) else pd.DataFrame([result])
-                else:
-                    out_queue.put(("error", f"Error: 'result' is of type {type(result)}, but it MUST be a pandas DataFrame."))
-                    return
-            except Exception:
-                out_queue.put(("error", f"Error: 'result' could not be converted to a DataFrame."))
-                return
-        
-        # Put the final DataFrame back to the queue
-        out_queue.put(("success", result))
-        
-    except Exception:
-        out_queue.put(("error", traceback.format_exc()))
+logger = logging.getLogger(__name__)
 
 class PythonExecutor:
     """
-    Executes generated Python/Pandas code in a separate process for isolation and safety.
+    Executes generated Python/Pandas code.
     """
 
     @staticmethod
-    def execute(test_data: Dict[str, List[Dict[str, Any]]], code: str, timeout: int = 15) -> Any:
+    def execute(test_data: Dict[str, List[Dict[str, Any]]], code: str, timeout: int = 30) -> Any:
         """
-        Executes code with a hard timeout and process isolation.
+        Executes code directly using exec().
         """
         clean_code = code.strip()
         if clean_code.startswith("```python"):
@@ -59,32 +24,44 @@ class PythonExecutor:
             clean_code = clean_code[:-3]
         clean_code = clean_code.strip()
 
-        # Use a Queue to get the result from the process
-        ctx = multiprocessing.get_context('spawn')
-        out_queue = ctx.Queue()
-        
-        process = ctx.Process(target=_worker, args=(test_data, clean_code, out_queue))
-        # Important: Ensure the process is NOT daemon to allow nested multiprocessing
-        process.daemon = False
-        process.start()
-        
-        try:
-            # Wait for result with timeout
-            # We use get() with timeout
+        # 1. Prepare local namespace with DataFrames
+        # Sanitize table names: replace spaces with underscores to make them valid Python identifiers
+        local_vars = {"pd": pd}
+        for table_name, rows in test_data.items():
             try:
-                status, result = out_queue.get(timeout=timeout)
-            except queue.Empty:
-                # Handle timeout
-                if process.is_alive():
-                    process.terminate()
-                process.join()
-                return f"Error: Python execution timed out after {timeout} seconds."
-            
-            process.join()
-            return result
-        except Exception as e:
-            if process.is_alive():
-                process.terminate()
-            process.join()
-            return f"Error during process management: {str(e)}"
+                var_name = table_name.replace(" ", "_")
+                local_vars[var_name] = pd.DataFrame(rows)
+            except Exception as e:
+                logger.error(f"Failed to convert table {table_name} to DataFrame: {e}")
 
+        # 2. Execute
+        try:
+            exec(clean_code, {"pd": pd, "__builtins__": __builtins__}, local_vars)
+            return PythonExecutor._get_result(local_vars)
+        except Exception as e:
+            # Extract the traceback and skip the first frame (the 'execute' method)
+            # to make it look like the code was run directly.
+            _, _, tb = sys.exc_info()
+            if tb is not None and tb.tb_next is not None:
+                return "".join(traceback.format_exception(type(e), e, tb.tb_next))
+            return traceback.format_exc()
+
+    @staticmethod
+    def _get_result(local_vars: Dict[str, Any]) -> Any:
+        """Helper to extract and validate 'result' from local_vars."""
+        if "result" not in local_vars:
+            return "Error: The code did not define a 'result' variable."
+        
+        result = local_vars["result"]
+            
+        # Enforce DataFrame check & Conversion
+        if not isinstance(result, pd.DataFrame):
+            try:
+                if isinstance(result, (list, dict, int, float, str)):
+                    result = pd.DataFrame(result) if isinstance(result, (list, dict)) else pd.DataFrame([result])
+                else:
+                    return f"Error: 'result' is of type {type(result)}, but it MUST be a pandas DataFrame."
+            except Exception:
+                return "Error: 'result' could not be converted to a DataFrame."
+        
+        return result

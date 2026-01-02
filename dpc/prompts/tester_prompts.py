@@ -5,23 +5,25 @@ You should:
 2. Identify the logical difference between SQL 1 and SQL 2 (e.g., a filter condition, a join type, or an aggregation).
 3. Generate a sufficient but minimal set of data that specifically triggers this logical difference.
 4. Ensure the data adheres to the Sliced Database Schema (correct table/column names, types, and foreign key relationships).
-5. Provide a concise thinking process before the final result.
+5. Leverage metadata in the Schema: Use column descriptions, value descriptions, and example values provided in the schema to ensure the generated test data is realistic and follows the expected data distribution/format of the original database.
+6. Provide a concise thinking process before the final result.
 
 Your output MUST follow this format:
 <thinking>
 [Your analysis of why the SQLs differ and how your data will expose that]
 </thinking>
 <result>
-{{
-    "test_data": {{
+{
+    "test_data": {
         "table_name1": [
-            {{"column1": value1, "column2": value2}},
+            {"column1": value1, "column2": value2},
             ...
         ],
         "table_name2": [...]
-    }}
-}}
-</result>"""
+    }
+}
+</result>
+IMPORTANT: The content inside <result> MUST be a valid, standard JSON string that can be parsed by `json.loads()`. DO NOT include any comments (like // or /* */) or extra text inside the JSON block. """
 
 TESTER_USER_PROMPT_TEMPLATE = """Sliced Database Schema:
 {sliced_schema}
@@ -43,5 +45,6 @@ TESTER_RETRY_PROMPT_TEMPLATE = """The previously generated test data has issues 
 ---
 
 Please analyze the logic difference between SQL 1 and SQL 2 again, and provide a corrected set of test data that yields DIFFERENT results. 
-Ensure your response strictly follows the output format defined in the system prompt (including <thinking> and <result> tags)."""
+Ensure your response strictly follows the output format defined in the system prompt (including <thinking> and <result> tags).
+The content inside <result> MUST be a valid, standard JSON string without any comments."""
 

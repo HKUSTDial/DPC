@@ -11,16 +11,17 @@ Your output MUST follow this format:
 [Your step-by-step analysis here]
 </thinking>
 <result>
-{{
+{
     "relevant_schema": [
-        {{
+        {
             "table": "table_name",
             "columns": ["column1", "column2"]
-        }},
+        },
         ...
     ]
-}}
-</result>"""
+}
+</result>
+IMPORTANT: The content inside <result> MUST be a valid, standard JSON string that can be parsed by `json.loads()`. DO NOT include any comments (like // or /* */) or extra text inside the JSON block. """
 
 SLICER_USER_PROMPT_TEMPLATE = """Full Database Schema:
 {full_schema}
@@ -36,4 +37,5 @@ SLICER_RETRY_PROMPT_TEMPLATE = """The previously identified Schema Slice has iss
 ---
 
 Please analyze the error (it could be a format issue, missing tables/columns, or incorrect names) and provide the corrected, complete Schema Slice. 
-Ensure your response strictly follows the output format defined in the system prompt (including <thinking> and <result> tags)."""
+Ensure your response strictly follows the output format defined in the system prompt (including <thinking> and <result> tags).
+The content inside <result> MUST be a valid, standard JSON string without any comments."""

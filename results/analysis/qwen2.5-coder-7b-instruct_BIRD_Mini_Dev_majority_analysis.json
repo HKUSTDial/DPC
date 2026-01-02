@@ -1,0 +1,1418 @@
+{
+    "summary": {
+        "total_samples": 500,
+        "filtered_samples": 275,
+        "excluded_samples": 225,
+        "majority_correct_count": 214,
+        "majority_incorrect_count": 61
+    },
+    "majority_correct_set": {
+        "statistics": {
+            "total": 214,
+            "sc_correct": 214,
+            "dpc_correct": 209,
+            "sc_accuracy": 100.0,
+            "dpc_accuracy": 97.66355140186917,
+            "dpc_gain": -2.336448598130829
+        },
+        "samples": [
+            {
+                "qid": "1483",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1484",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1493",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1473",
+                "sc_correct": true,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1506",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1507",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1509",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1514",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1515",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1521",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1312",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1317",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1323",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1331",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1339",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1346",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1344",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1352",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1351",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1500",
+                "sc_correct": true,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1356",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1361",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1357",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1368",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1371",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1375",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1378",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1380",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1381",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1387",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1394",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1398",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1403",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1401",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1409",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1411",
+                "sc_correct": true,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1422",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1432",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1410",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1426",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1435",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1457",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1460",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1152",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1157",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1156",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1164",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1162",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1155",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1171",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1208",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1195",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1220",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1231",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1209",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1238",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1252",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1239",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1035",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1036",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1044",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1042",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1057",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1039",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1048",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1088",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1091",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1098",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1096",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1102",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1110",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1103",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1116",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1105",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1130",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1134",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1141",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1122",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1139",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "850",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "854",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1136",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "859",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "857",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "862",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "868",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "869",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "875",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1148",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "880",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1147",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "881",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "879",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "909",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "910",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "912",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "931",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "940",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "945",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "933",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "948",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "951",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "960",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "964",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "971",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "972",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "954",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "717",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "719",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "723",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "724",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "733",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "737",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "732",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "736",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "740",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "739",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "745",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "744",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "750",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "747",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "753",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "751",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "760",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "761",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "764",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "765",
+                "sc_correct": true,
+                "dpc_correct": false
+            },
+            {
+                "qid": "769",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "773",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "775",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "779",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "785",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "781",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "782",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "790",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "786",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "792",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "788",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "794",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "797",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "800",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "796",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "801",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "798",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "806",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "822",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "824",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "829",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "738",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "825",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "532",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "544",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "549",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "547",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "730",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "568",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "557",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "573",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "572",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "669",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "671",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "633",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "704",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "705",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "687",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "716",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "707",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "356",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "358",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "368",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "352",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "379",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "383",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "371",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "397",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "414",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "427",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "422",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "424",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "468",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "459",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "474",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "462",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "466",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "479",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "416",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "486",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "477",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "522",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "480",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "195",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "200",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "206",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "212",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "213",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "218",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "227",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "230",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "236",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "249",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "255",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "268",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "260",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "5",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "327",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "528",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "36",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "45",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "50",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "62",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "82",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "112",
+                "sc_correct": true,
+                "dpc_correct": true
+            },
+            {
+                "qid": "128",
+                "sc_correct": true,
+                "dpc_correct": false
+            },
+            {
+                "qid": "145",
+                "sc_correct": true,
+                "dpc_correct": true
+            }
+        ]
+    },
+    "majority_incorrect_set": {
+        "statistics": {
+            "total": 61,
+            "sc_correct": 0,
+            "dpc_correct": 19,
+            "sc_accuracy": 0.0,
+            "dpc_accuracy": 31.147540983606557,
+            "dpc_gain": 31.147540983606557
+        },
+        "samples": [
+            {
+                "qid": "1471",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1476",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1525",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1526",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1490",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1405",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1464",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1153",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1362",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1166",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1169",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1281",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1030",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1025",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1031",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1078",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1079",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1076",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1080",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "1040",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1113",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1133",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1114",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1146",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "884",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "877",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "950",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "978",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "989",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1001",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "994",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "1002",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "758",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "819",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "531",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "563",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "539",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "555",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "578",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "592",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "567",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "604",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "678",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "345",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "346",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "391",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "409",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "472",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "487",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "208",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "228",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "240",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "239",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "253",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "282",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "273",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "263",
+                "sc_correct": false,
+                "dpc_correct": false
+            },
+            {
+                "qid": "37",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "117",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "118",
+                "sc_correct": false,
+                "dpc_correct": true
+            },
+            {
+                "qid": "136",
+                "sc_correct": false,
+                "dpc_correct": false
+            }
+        ]
+    },
+    "overall": {
+        "statistics": {
+            "total": 275,
+            "sc_correct": 214,
+            "dpc_correct": 228,
+            "sc_accuracy": 77.81818181818181,
+            "dpc_accuracy": 82.9090909090909,
+            "dpc_gain": 5.0909090909090935
+        }
+    }
+}

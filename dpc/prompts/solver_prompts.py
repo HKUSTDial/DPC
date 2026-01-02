@@ -6,6 +6,8 @@ You should:
 3. Write clean, efficient Pandas code to compute the answer.
 4. IMPORTANT: Store the final result in a variable named 'result'. 
 5. The 'result' MUST ALWAYS be a pandas DataFrame. Even for single values or lists, wrap them in a DataFrame.
+6. COLUMN SELECTION: The final DataFrame MUST ONLY contain columns that are explicitly asked for in the question. Do not include extra or redundant columns.
+7. COLUMN ORDERING: The order of columns in the final DataFrame MUST strictly follow the order mentioned in the natural language question.
 
 Your output MUST follow this format:
 <thinking>
@@ -15,20 +17,23 @@ Your output MUST follow this format:
 [Your Python code here]
 </result>"""
 
-SOLVER_USER_PROMPT_TEMPLATE = """### Sliced Database Schema:
-{sliced_schema}
+SOLVER_USER_PROMPT_TEMPLATE = """{test_data_with_types}
 
-### Test Data (Full Context):
-{test_data_tables}
+### Database Relationships (PK/FK):
+{relationships}
 
-### Available DataFrames:
+### Available DataFrames (Pandas Variables):
 {df_names}
 
 ### Natural Language Question:
 {question}
 {evidence_str}
 
-Please write the Pandas code to solve the question. Ensure the final answer is stored in the `result` variable."""
+Please write the Pandas code to solve the question. 
+Remember:
+- Only return columns explicitly asked for in the question.
+- The column order must match the question's order.
+- Ensure the final answer is stored in the `result` variable as a DataFrame."""
 
 SOLVER_RETRY_PROMPT_TEMPLATE = """The previously generated code has issues. Error details:
 ---

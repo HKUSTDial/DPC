@@ -1,5 +1,12 @@
 config.toml
 data/
-dpc_results.json
+dpc_results/
 dpc_run.log
 .DS_Store
+
+results/temp
+evaluation/temp.py
+
+model_key
+
+**/__pycache__/**

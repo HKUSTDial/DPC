@@ -54,24 +54,16 @@ pip install -r requirements.txt
 
 ## ⚙️ Configuration
 
-Copy the example configuration and fill in your details:
+We now support command-line arguments for all configurations. You can run the pipeline directly using the provided shell scripts in the `scripts/` directory, which allow you to override settings via environment variables.
 
+For example, to run the DPC selection:
 ```bash
-cp config.toml.example config.toml
+bash scripts/run_dpc_selection.sh
 ```
 
-Edit `config.toml`:
-```toml
-[llm]
-model_name = "gpt-4o"
-api_key = "sk-..." # or set as environment variable
-
-[dataset]
-dataset_type = "spider" # or "bird"
-data_path = "data/spider/dev.json"
-db_root_path = "data/spider/database"
-pred_sqls_path = "data/spider/pred_sqls.json" # Input candidates
-output_path = "dpc_results.json"
+Or run the baseline generation:
+```bash
+bash scripts/run_gen_baseline.sh
 ```
 
 ---
@@ -94,14 +86,21 @@ The system expects a `pred_sqls.json` file containing candidate SQLs generated b
 
 ## 🏃 Running the Pipeline
 
-To process the entire dataset in parallel:
+To process the entire dataset in parallel using the main entry point:
 
 ```bash
-python main.py
+python baseline/run_dpc_selection.py \
+    --dataset_type bird \
+    --data_path data/bird/dev/dev.json \
+    --db_root_path data/bird/dev/dev_databases \
+    --pred_sqls_path results/candidates/GPT-4o.json \
+    --output_path results/selected/DPC_Results.json \
+    --model_name gpt-4o \
+    --num_workers 8
 ```
 
 -   The script will display a progress bar.
--   Results are saved in real-time to `dpc_results.json`.
+-   Results are saved in real-time to the specified output path in `{"qid": "sql"}` format.
 -   If the process stops, simply re-run the command to resume.
 
 ---
@@ -112,14 +111,14 @@ python main.py
 DPC-SQL/
 ├── dpc/
 │   ├── agents/         # LLM Agents (Slicer, Tester, Solver)
-│   ├── config/         # Settings and TOML loader
 │   ├── core/           # Main Pipeline logic
 │   ├── datasets/       # Spider/BIRD Loaders
 │   ├── eval/           # Soft-F1 Metrics
 │   ├── prompts/        # Standardized Prompt Templates & Factory
 │   └── utils/          # DB utils, Python Sandbox, Clustering
-├── main.py             # Batch processing entry point
-├── config.toml         # Local configuration (user-provided)
+├── baseline/           # Baseline scripts (SC, DPC, LLM-Selection)
+├── evaluation/         # Evaluation scripts (Execution Accuracy)
+├── scripts/            # Helper shell scripts for running experiments
 └── requirements.txt    # Project dependencies
 ```
 

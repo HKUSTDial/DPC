@@ -3,5 +3,4 @@ numpy
 tabulate
 openai
 tqdm
-toml
-
+chardet

@@ -1,7 +1,10 @@
+import logging
 from typing import List, Dict, Any, Optional
 from .base_agent import BaseAgent
 from ..prompts.factory import PromptFactory
 from ..utils.schema_utils import TableSchema, SchemaExtractor
+
+logger = logging.getLogger(__name__)
 
 class SlicerAgent(BaseAgent):
     """
@@ -17,8 +20,13 @@ class SlicerAgent(BaseAgent):
         """
         Runs the schema slicing process with an iterative dry-run correction loop.
         """
-        # 1. Convert full schema to readable text
-        full_schema_text = SchemaExtractor.to_readable_text(full_schema)
+        # 1. Convert full schema to readable text - include stats and examples for slicing
+        full_schema_text = SchemaExtractor.to_readable_text(
+            full_schema, 
+            include_stats=True, 
+            include_examples=True,
+            include_descriptions=True
+        )
         
         # 2. Initial messages
         messages = PromptFactory.get_slicer_prompt(
@@ -36,33 +44,37 @@ class SlicerAgent(BaseAgent):
             return True
 
         for attempt in range(max_correction_attempts + 1):
-            # Call LLM and parse JSON
-            response_text = self.llm.ask(messages)
-            messages.append({"role": "assistant", "content": response_text})
-            
             try:
+                logger.info(f"[SlicerAgent] Slicing attempt {attempt + 1}/{max_correction_attempts + 1}...")
+                response_text = self.llm.ask(messages)
+                messages.append({"role": "assistant", "content": response_text})
+                
                 # Basic JSON structure validation
                 parsed = self._parse_json_response(response_text)
                 if not validate_json_format(parsed):
                     raise ValueError("Incorrect JSON structure: missing 'relevant_schema' or table/columns keys.")
                 
                 relevant_items = parsed["relevant_schema"]
+                logger.debug(f"[SlicerAgent] LLM suggested {len(relevant_items)} tables.")
                 
                 # Filter the schema
                 sliced_schema = self._filter_schema(full_schema, relevant_items)
                 if not sliced_schema:
                     raise ValueError("The identified Schema Slice resulted in an empty set of tables.")
 
+                logger.info(f"[SlicerAgent] Schema filtered to {len(sliced_schema)} tables. Validating via dry-run...")
+
                 # 4. Dry Run Validation: Test if SQLs can execute against this slice
                 dry_run_errors = self._dry_run_validation(candidate_sqls, sliced_schema)
                 
                 if not dry_run_errors:
-                    # Success!
+                    logger.info("[SlicerAgent] Dry-run successful! Schema slice is valid.")
                     return sliced_schema
                 else:
                     # Logic error in schema slice (missing columns/tables)
+                    error_msg = "\n".join(dry_run_errors)
+                    logger.warning(f"[SlicerAgent] Dry-run failed:\n{error_msg}")
                     if attempt < max_correction_attempts:
-                        error_msg = "\n".join(dry_run_errors)
                         retry_messages = PromptFactory.get_slicer_retry_prompt(error_msg)
                         messages.extend(retry_messages)
                         continue
@@ -107,8 +119,10 @@ class SlicerAgent(BaseAgent):
             # Test each SQL
             for i, sql in enumerate(sqls):
                 try:
-                    # Using pd.read_sql_query with LIMIT 0 to check schema validity
-                    test_sql = f"SELECT * FROM ({sql.strip().rstrip(';')}) LIMIT 0;"
+                    # 1. Use EXPLAIN to validate the SQL against the sliced schema.
+                    # No need for complex cleaning because we're prefixing, not appending.
+                    # We just strip whitespace to be clean.
+                    test_sql = f"EXPLAIN {sql.strip()}"
                     pd.read_sql_query(test_sql, conn)
                 except Exception as e:
                     errors.append(f"SQL {i+1} Error: {str(e)}")

@@ -6,8 +6,11 @@ from typing import List, Dict, Any, Optional
 import openai
 from .base_llm import BaseLLM
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+import logging
+from typing import List, Dict, Any, Optional
+import openai
+from .base_llm import BaseLLM
+
 logger = logging.getLogger(__name__)
 
 class OpenAILLM(BaseLLM):
@@ -37,6 +40,12 @@ class OpenAILLM(BaseLLM):
 
     def ask(self, messages: List[Dict[str, str]]) -> str:
         last_exception = None
+        
+        # Detailed debug logging for LLM calls
+        logger.debug(f"LLM Call - Model: {self.model_name}")
+        for msg in messages:
+            logger.debug(f"  [{msg['role'].upper()}]: {msg['content']}")
+
         for attempt in range(self.max_retries):
             try:
                 response = self.client.chat.completions.create(
@@ -45,7 +54,15 @@ class OpenAILLM(BaseLLM):
                     temperature=self.temperature,
                     max_tokens=self.max_tokens
                 )
-                return response.choices[0].message.content.strip()
+                
+                # Track token usage
+                if response.usage:
+                    self.total_prompt_tokens += response.usage.prompt_tokens
+                    self.total_completion_tokens += response.usage.completion_tokens
+
+                content = response.choices[0].message.content.strip()
+                logger.debug(f"LLM Response (Attempt {attempt + 1}): {content}")
+                return content
             except Exception as e:
                 last_exception = e
                 logger.error(f"Error calling LLM (attempt {attempt + 1}/{self.max_retries}): {e}")

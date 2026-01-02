@@ -1,8 +1,11 @@
+import logging
 from typing import List, Dict, Any, Optional
 from .base_agent import BaseAgent
 from ..prompts.factory import PromptFactory
 from ..utils.schema_utils import TableSchema, SchemaExtractor
 from ..eval.metrics import DPCEvaluator
+
+logger = logging.getLogger(__name__)
 
 class TesterAgent(BaseAgent):
     """
@@ -23,8 +26,13 @@ class TesterAgent(BaseAgent):
         """
         Runs the test data generation process with closed-loop validation.
         """
-        # 1. Prepare schema text
-        schema_text = SchemaExtractor.to_readable_text(sliced_schema)
+        # 1. Prepare schema text - include descriptions and examples to help LLM understand data distribution
+        schema_text = SchemaExtractor.to_readable_text(
+            sliced_schema, 
+            include_stats=True, 
+            include_examples=True,
+            include_descriptions=True
+        )
         
         # 2. Get initial messages
         messages = PromptFactory.get_tester_prompt(
@@ -43,10 +51,11 @@ class TesterAgent(BaseAgent):
             return isinstance(test_data, dict) and any(isinstance(rows, list) for rows in test_data.values())
 
         for attempt in range(max_correction_attempts + 1):
-            response_text = self.llm.ask(messages)
-            messages.append({"role": "assistant", "content": response_text})
-            
             try:
+                logger.info(f"[TesterAgent] Generation attempt {attempt + 1}/{max_correction_attempts + 1}...")
+                response_text = self.llm.ask(messages)
+                messages.append({"role": "assistant", "content": response_text})
+                
                 # Basic JSON and Schema Alignment
                 parsed = self._parse_json_response(response_text)
                 if not validate_json_format(parsed):
@@ -58,14 +67,17 @@ class TesterAgent(BaseAgent):
                 if not aligned_data:
                     raise ValueError("None of the generated tables match the provided Sliced Schema.")
 
+                logger.info(f"[TesterAgent] Successfully generated data for {len(aligned_data)} tables. Verifying distinction...")
+
                 # 4. Closed-loop Validation: Do the SQLs actually differ on this data?
                 distinction_error = self._verify_distinction(sql_1, sql_2, aligned_data)
                 
                 if not distinction_error:
-                    # Success: Data is valid and distinguishing
+                    logger.info("[TesterAgent] Data verified: SQLs yield DIFFERENT results. Success!")
                     return aligned_data
                 else:
                     # Data is ineffective
+                    logger.warning(f"[TesterAgent] Data verification failed: {distinction_error}")
                     if attempt < max_correction_attempts:
                         retry_messages = PromptFactory.get_tester_retry_prompt(distinction_error)
                         messages.extend(retry_messages)
@@ -125,30 +137,63 @@ class TesterAgent(BaseAgent):
         raw_data: Dict[str, Any], 
         sliced_schema: Dict[str, TableSchema]
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Aligns generated table names and column names with the schema (case-insensitive)."""
+        """
+        Aligns generated table/column names with the schema (case-insensitive).
+        Raises ValueError with detailed feedback if data alignment fails.
+        """
         table_lookup = {name.lower(): name for name in sliced_schema.keys()}
         aligned_data = {}
-        
-        for raw_table_name, rows in raw_data.items():
-            table_lower = raw_table_name.lower()
-            if table_lower in table_lookup:
-                original_table_name = table_lookup[table_lower]
-                original_table = sliced_schema[original_table_name]
-                col_lookup = {c.lower(): c for c in original_table.columns.keys()}
+        errors = []
+
+        # 1. Check for extra tables
+        for raw_table_name in raw_data.keys():
+            if raw_table_name.lower() not in table_lookup:
+                errors.append(f"- Table '{raw_table_name}' is not in the Sliced Schema.")
+
+        # 2. Check for missing tables and alignment
+        for target_table_name, table_schema in sliced_schema.items():
+            raw_table_match = next((k for k in raw_data.keys() if k.lower() == target_table_name.lower()), None)
+            
+            if not raw_table_match:
+                errors.append(f"- Table '{target_table_name}' is missing from your generated data.")
+                continue
                 
-                aligned_rows = []
-                for row in rows:
-                    if not isinstance(row, dict): continue
-                    aligned_row = {}
-                    for raw_col_name, val in row.items():
-                        col_lower = raw_col_name.lower()
-                        if col_lower in col_lookup:
-                            aligned_row[col_lookup[col_lower]] = val
-                    if aligned_row:
-                        aligned_rows.append(aligned_row)
+            rows = raw_data[raw_table_match]
+            if not isinstance(rows, list) or not rows:
+                errors.append(f"- Table '{target_table_name}' must contain a non-empty list of rows.")
+                continue
+
+            col_lookup = {c.lower(): c for c in table_schema.columns.keys()}
+            aligned_rows = []
+            
+            for i, row in enumerate(rows):
+                if not isinstance(row, dict):
+                    errors.append(f"- Row {i} in table '{target_table_name}' is not a JSON object.")
+                    continue
                 
-                if aligned_rows:
-                    aligned_data[original_table_name] = aligned_rows
+                aligned_row = {}
+                row_cols_lower = {k.lower() for k in row.keys()}
+                
+                # Check for missing columns
+                for target_col in table_schema.columns.keys():
+                    if target_col.lower() not in row_cols_lower:
+                        errors.append(f"- Column '{target_col}' is missing in table '{target_table_name}' (Row {i}).")
+                
+                # Check for extra columns and align
+                for raw_col_name, val in row.items():
+                    col_lower = raw_col_name.lower()
+                    if col_lower in col_lookup:
+                        aligned_row[col_lookup[col_lower]] = val
+                    else:
+                        errors.append(f"- Column '{raw_col_name}' in table '{target_table_name}' is not in the schema.")
+                
+                aligned_rows.append(aligned_row)
+                
+            aligned_data[target_table_name] = aligned_rows
+
+        if errors:
+            feedback = "Test data alignment errors found:\n" + "\n".join(errors)
+            raise ValueError(feedback)
                     
         return aligned_data
 
