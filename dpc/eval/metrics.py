@@ -65,21 +65,6 @@ def normalize_result(data: Any) -> List[Tuple[Any, ...]]:
         
     return normalized_rows
 
-def canonicalize_result(rows: List[Tuple[Any, ...]]) -> List[Tuple[Any, ...]]:
-    """
-    Standardizes the result set for order-insensitive comparison.
-    1. Sorts rows (row-order insensitive) to handle non-ORDER BY queries.
-    2. Keeps column order intact (column-order SENSITIVE).
-    """
-    if not rows:
-        return []
-        
-    # Sort rows to make it row-order insensitive (multiset comparison).
-    # We use str(x) as the key to safely handle None and mixed types.
-    rows.sort(key=lambda x: str(x))
-    
-    return rows
-
 def calculate_row_match(predicted_row: Tuple[Any, ...], ground_truth_row: Tuple[Any, ...]) -> Tuple[float, float, float]:
     """
     Calculate the matching percentage for a single row based on column position.
@@ -110,7 +95,8 @@ def calculate_row_match(predicted_row: Tuple[Any, ...], ground_truth_row: Tuple[
 def calculate_soft_f1(predicted: List[Tuple[Any, ...]], ground_truth: List[Tuple[Any, ...]]) -> float:
     """
     Calculates the Soft-F1 score between two result sets (List of Tuples).
-    Uses greedy matching to find the best correspondence between rows.
+    Uses the Hungarian Algorithm (via scipy.optimize.linear_sum_assignment)
+    to find the GLOBAL OPTIMAL matching between rows.
     """
     # Normalized empty check
     if not predicted and not ground_truth:
@@ -119,62 +105,92 @@ def calculate_soft_f1(predicted: List[Tuple[Any, ...]], ground_truth: List[Tuple
         return 0.0
 
     # Canonicalize results for robust comparison
-    predicted = canonicalize_result(predicted)
-    ground_truth = canonicalize_result(ground_truth)
+    # predicted = canonicalize_result(predicted)
+    # ground_truth = canonicalize_result(ground_truth)
 
-    match_scores = []
-    pred_only_scores = []
-    truth_only_scores = []
+    n_pred = len(predicted)
+    n_gt = len(ground_truth)
     
-    temp_predicted = list(predicted)
+    # We need a square cost matrix for the assignment problem if we want to penalize
+    # unmatched rows purely by the algorithm, but standard implementation allows rectangular matrices.
+    # However, to correctly account for FP and FN rows, we'll compute costs between all pairs.
     
-    # Greedy matching to find the best pair for each ground truth row
-    for gt_row in ground_truth:
-        if not temp_predicted:
-            match_scores.append(0.0)
-            pred_only_scores.append(0.0)
-            truth_only_scores.append(1.0)
-            continue
+    # Cost Matrix Construction:
+    # We want to MAXIMIZE match score, so we MINIMIZE cost.
+    # Cost = 1.0 - match_score
+    
+    import numpy as np
+    from scipy.optimize import linear_sum_assignment
+
+    cost_matrix = np.zeros((n_pred, n_gt))
+    
+    # Pre-calculate match details to avoid re-computation
+    # match_details[i][j] = (match_percentage, pred_only, truth_only)
+    match_details = {}
+
+    for i in range(n_pred):
+        for j in range(n_gt):
+            m, p, t = calculate_row_match(predicted[i], ground_truth[j])
+            match_details[(i, j)] = (m, p, t)
+            # Cost is the "distance" from a perfect match
+            cost_matrix[i, j] = 1.0 - m
+
+    # Apply Hungarian Algorithm
+    # row_ind: indices in predicted
+    # col_ind: indices in ground_truth
+    row_ind, col_ind = linear_sum_assignment(cost_matrix)
+    
+    # Calculate scores based on the optimal assignment
+    tp_sum = 0.0
+    fp_sum = 0.0
+    fn_sum = 0.0
+    
+    matched_pred_indices = set(row_ind)
+    matched_gt_indices = set(col_ind)
+    
+    # Accumulate scores for matched pairs
+    for r, c in zip(row_ind, col_ind):
+        m, p, t = match_details[(r, c)]
+        tp_sum += m
+        fp_sum += p
+        fn_sum += t
+        
+    # Handle unmatched rows
+    
+    # Unmatched in Predicted -> All elements are False Positives
+    # In calculate_row_match logic: (0.0 match, 1.0 pred_only, 0.0 truth_only) for completely new row vs empty
+    # But effectively, each column in an unmatched predicted row is a False Positive.
+    # Let's align with the previous logic: 
+    # For a row that has NO match in GT, it contributes 0.0 to TP, 1.0 * len(row) ? 
+    # Wait, calculate_row_match normalizes by len(ground_truth_row).
+    # If a predicted row is extra, it's fully False Positive.
+    
+    # Consistent Logic with previous greedy:
+    # "Remaining predicted rows are false positives" -> pred_only_scores.append(1.0)
+    for i in range(n_pred):
+        if i not in matched_pred_indices:
+            # Entire row is False Positive
+            tp_sum += 0.0
+            fp_sum += 1.0
+            fn_sum += 0.0
             
-        best_m = -1.0
-        best_idx = 0
-        best_p = 0.0
-        best_t = 0.0
+    # Unmatched in Ground Truth -> All elements are False Negatives
+    # "Remaining GT rows are false negatives" -> truth_only_scores.append(1.0)
+    for j in range(n_gt):
+        if j not in matched_gt_indices:
+            # Entire row is False Negative
+            tp_sum += 0.0
+            fp_sum += 0.0
+            fn_sum += 1.0
+
+    # Final F1 Calculation
+    precision = tp_sum / (tp_sum + fp_sum) if (tp_sum + fp_sum) > 0 else 0.0
+    recall = tp_sum / (tp_sum + fn_sum) if (tp_sum + fn_sum) > 0 else 0.0
+
+    if precision + recall == 0:
+        return 0.0
         
-        # In sorted lists, the best match is likely to be at a similar position,
-        # but we check all to be sure for small synthetic sets.
-        for idx, pred_row in enumerate(temp_predicted):
-            m, p, t = calculate_row_match(pred_row, gt_row)
-            if m > best_m:
-                best_m = m
-                best_p = p
-                best_t = t
-                best_idx = idx
-            if m == 1.0: # Exact match
-                break
-        
-        match_scores.append(best_m)
-        pred_only_scores.append(best_p)
-        truth_only_scores.append(best_t)
-        temp_predicted.pop(best_idx)
-
-        # Remaining predicted rows are false positives
-        for _ in temp_predicted:
-            match_scores.append(0.0)
-            pred_only_scores.append(1.0)
-            truth_only_scores.append(0.0)
-
-    tp = sum(match_scores)
-    fp = sum(pred_only_scores)
-    fn = sum(truth_only_scores)
-
-    precision = tp / (tp + fp) if tp + fp > 0 else 0
-    recall = tp / (tp + fn) if tp + fn > 0 else 0
-
-    f1_score = (
-        2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-    )
-    return f1_score
+    return 2 * precision * recall / (precision + recall)
 
 class DPCEvaluator:
     """

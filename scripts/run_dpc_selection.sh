@@ -4,11 +4,11 @@
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-PRED_SQLS_PATH=${PRED_SQLS_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_DPC.json"}
+PRED_SQLS_PATH=${PRED_SQLS_PATH:-"results/candidates/DeepSeek-Chat_BIRD_Mini_Dev.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"results/temp/DeepSeek-Chat_BIRD_Mini_Dev_DPC.json"}
 
 # --- LLM Configuration ---
-MODEL_NAME=${MODEL_NAME:-"qwen2.5-coder-7b-instruct"}
+MODEL_NAME=${MODEL_NAME:-"deepseek-chat"}
 API_KEY=${API_KEY:-""}
 BASE_URL=${BASE_URL:-""}
 TEMPERATURE=${TEMPERATURE:-0.7}

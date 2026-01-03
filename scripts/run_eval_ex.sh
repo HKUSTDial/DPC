@@ -5,7 +5,7 @@
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-PRED_PATH=${PRED_PATH:-"results/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_MCS.json"}
+PRED_PATH=${PRED_PATH:-"results/temp/DeepSeek-Chat_BIRD_Mini_Dev_DPC.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}

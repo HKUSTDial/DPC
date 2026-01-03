@@ -4,3 +4,4 @@ tabulate
 openai
 tqdm
 chardet
+scipy

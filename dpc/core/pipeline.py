@@ -7,7 +7,7 @@ from ..utils.db_utils import execute_sql_pd
 from ..agents.slicer_agent import SlicerAgent
 from ..agents.tester_agent import TesterAgent
 from ..agents.solver_agent import PythonSolverAgent
-from ..eval.metrics import DPCEvaluator, normalize_result, canonicalize_result
+from ..eval.metrics import DPCEvaluator
 
 logger = logging.getLogger(__name__)
 
@@ -173,31 +173,45 @@ class DPCPipeline:
     def _vote_on_python_results(self, py_results: List[Any]) -> Any:
         """
         Majority vote on the results of multiple Python Solver executions.
-        Uses canonicalized results for robust voting.
+        Uses DPCEvaluator.evaluate (Soft-F1) to cluster equivalent results.
+        If Soft-F1 score is > 0.99, we consider them equivalent.
         """
         if not py_results:
             return None
         if len(py_results) == 1:
             return py_results[0]
             
-        counts = {}
-        for i, res in enumerate(py_results):
-            # Normalize and Canonicalize for consistent comparison (order-insensitive)
-            norm = normalize_result(res)
-            canonical = canonicalize_result(norm)
-            
-            # Use string representation of the canonical list of tuples for hashing
-            key = str(canonical) 
-            if key not in counts:
-                counts[key] = {"count": 0, "first_index": i}
-            counts[key]["count"] += 1
-            
-        # Find the one with highest count
-        winner_key = max(counts, key=lambda k: counts[k]["count"])
-        winner_index = counts[winner_key]["first_index"]
+        # Group results by similarity
+        # We need a way to group "fuzzy" matches. 
+        # A simple approach: 
+        # 1. Take the first result as the representative of Group 1.
+        # 2. Compare next result with representatives of existing groups.
+        # 3. If match (score > threshold), add to group. Else create new group.
         
-        logger.info(f"Voting result: {counts[winner_key]['count']}/{len(py_results)} agreed on the majority result.")
-        return py_results[winner_index]
+        groups = [] # List of {'representative': res, 'count': int, 'members': [res]}
+        
+        for res in py_results:
+            found_group = False
+            for group in groups:
+                # Use our robust metric for comparison
+                score = DPCEvaluator.evaluate(res, group['representative'])
+                if score > 0.99: # Almost identical
+                    group['count'] += 1
+                    group['members'].append(res)
+                    found_group = True
+                    break
+            
+            if not found_group:
+                groups.append({'representative': res, 'count': 1, 'members': [res]})
+        
+        # Sort groups by count descending
+        groups.sort(key=lambda x: x['count'], reverse=True)
+        
+        winner_group = groups[0]
+        logger.info(f"Voting result: {winner_group['count']}/{len(py_results)} agreed on the majority result.")
+        
+        # Return the representative of the winning group
+        return winner_group['representative']
 
     def _execute_sql_on_data(
         self, 
