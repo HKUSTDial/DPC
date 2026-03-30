@@ -1,7 +1,0 @@
-pandas
-numpy
-tabulate
-openai
-tqdm
-chardet
-scipy

@@ -11,5 +11,6 @@ evaluation/temp.py
 model_key
 
 **/__pycache__/**
+.venv/
 
 temp/

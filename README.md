@@ -37,10 +37,16 @@ Current LLM-as-a-Judge methods often suffer from the **Oracle Paradox**: to judg
 
 ## 🛠️ Installation
 
-We recommend using `uv` or `pip`:
+We use `uv` for dependency management:
 
 ```bash
-pip install -r requirements.txt
+uv sync
+```
+
+To run scripts without manually activating the virtual environment, prefer `uv run`:
+
+```bash
+uv run python baseline/run_dpc_selection.py --help
 ```
 
 **Requirements**:
@@ -89,7 +95,7 @@ The system expects a `pred_sqls.json` file containing candidate SQLs generated b
 To process the entire dataset in parallel using the main entry point:
 
 ```bash
-python baseline/run_dpc_selection.py \
+uv run python baseline/run_dpc_selection.py \
     --dataset_type bird \
     --data_path data/bird/dev/dev.json \
     --db_root_path data/bird/dev/dev_databases \
@@ -119,9 +125,10 @@ DPC-SQL/
 │   └── utils/          # DB utils, Python Sandbox, Clustering
 ├── baseline/           # Baseline scripts (SC, DPC, LLM-Selection)
 ├── evaluation/         # Evaluation scripts (Execution Accuracy)
+├── pyproject.toml      # uv project/dependency definition
 ├── results/            # Checked-in snapshots / curated result files
 ├── scripts/            # Helper shell scripts for running experiments
-└── requirements.txt    # Project dependencies
+└── uv.lock             # uv lockfile
 ```
 
 ---

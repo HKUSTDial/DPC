@@ -1,0 +1,18 @@
+[project]
+name = "dpc-sql"
+version = "0.1.0"
+description = "Dual-Program Consistency for Text-to-SQL selection"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "chardet",
+    "numpy",
+    "openai",
+    "pandas",
+    "scipy",
+    "tabulate",
+    "tqdm",
+]
+
+[tool.uv]
+package = false
