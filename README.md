@@ -53,7 +53,6 @@ uv run python baseline/run_dpc_selection.py --help
 -   `pandas`, `numpy`: Data processing.
 -   `openai`: LLM connectivity.
 -   `tabulate`: Visualizing data tables in prompts.
--   `toml`: Configuration management.
 -   `tqdm`: Progress tracking.
 
 ---
