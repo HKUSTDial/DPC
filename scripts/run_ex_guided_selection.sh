@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # --- Configuration ---
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-CANDIDATES_PATH=${CANDIDATES_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_EX_Guided.json"}
+CANDIDATES_PATH=${CANDIDATES_PATH:-"${ARTIFACT_ROOT}/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_EX_Guided.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}
@@ -25,4 +26,3 @@ python baseline/run_ex_guided_selection.py \
     --output_path "$OUTPUT_PATH" \
     --timeout "$TIMEOUT" \
     --num_workers "$NUM_WORKERS"
-

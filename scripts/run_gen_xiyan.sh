@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # --- Configuration ---
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/candidates/XiYanSQL-QwenCoder-7B_BIRD_Mini_Dev.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/candidates/XiYanSQL-QwenCoder-7B_BIRD_Mini_Dev.json"}
 
 # --- LLM Configuration ---
 MODEL_NAME=${MODEL_NAME:-"XiYanSQL-QwenCoder-7B"}
@@ -46,4 +47,3 @@ if [ -n "$BASE_URL" ]; then
 fi
 
 python baseline/run_sql_generation_with_xiyan.py "${CMD_ARGS[@]}"
-

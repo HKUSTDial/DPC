@@ -5,6 +5,7 @@ dpc_run.log
 .DS_Store
 
 results/temp
+artifacts/
 evaluation/temp.py
 
 model_key

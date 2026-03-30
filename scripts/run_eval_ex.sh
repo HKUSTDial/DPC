@@ -2,10 +2,11 @@
 
 # --- Configuration ---
 # You can override these variables or pass them as environment variables
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-PRED_PATH=${PRED_PATH:-"results/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_DPC.json"}
+PRED_PATH=${PRED_PATH:-"${ARTIFACT_ROOT}/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_DPC.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}
@@ -29,4 +30,3 @@ CMD_ARGS=(
 
 # Run the evaluation script
 python evaluation/eval_ex.py "${CMD_ARGS[@]}"
-

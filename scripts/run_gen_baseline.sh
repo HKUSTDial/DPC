@@ -2,10 +2,11 @@
 
 # --- Configuration ---
 # You can override these variables or pass them as environment variables
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"spider"}
 DATA_PATH=${DATA_PATH:-"data/spider/test.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/spider/test_database"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/candidates/GPT-5_SPIDER_Test.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/candidates/GPT-5_SPIDER_Test.json"}
 # --- LLM Configuration ---
 MODEL_NAME=${MODEL_NAME:-"gpt-5-chat-latest"}
 API_KEY=${API_KEY:-""}
@@ -46,4 +47,3 @@ if [ -n "$BASE_URL" ]; then
 fi
 
 python baseline/run_sql_generation.py "${CMD_ARGS[@]}"
-

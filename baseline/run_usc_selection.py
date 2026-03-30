@@ -1,9 +1,7 @@
 import os
 import sys
-import json
 import argparse
 import logging
-import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -12,10 +10,17 @@ from tqdm import tqdm
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dpc.datasets.spider_loader import SpiderLoader
-from dpc.datasets.bird_loader import BirdLoader
+from baseline.common import (
+    UsageStats,
+    build_llm_config,
+    build_loader,
+    iter_dataset_with_candidates,
+    load_candidate_map,
+    save_json,
+)
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.utils.schema_utils import SchemaExtractor
+from dpc.utils.response_parser import parse_json_response
 
 
 # Configure logging
@@ -68,15 +73,8 @@ Output format (strict JSON only):
 """
 
 
-def extract_json_object(text: str) -> Dict[str, Any]:
-    match = re.search(r"\{[\s\S]*\}", text)
-    if not match:
-        raise ValueError("No JSON object found in model response.")
-    return json.loads(match.group(0))
-
-
 def parse_selected_sql(response_text: str, candidates: List[str]) -> Tuple[Optional[str], Optional[int]]:
-    parsed = extract_json_object(response_text)
+    parsed = parse_json_response(response_text)
     selected_index = parsed.get("selected_index")
 
     if not isinstance(selected_index, int):
@@ -157,28 +155,18 @@ def main():
     args = parser.parse_args()
 
     # 1) Load dataset
-    if args.dataset_type.lower() == "spider":
-        loader = SpiderLoader(args.data_path, args.db_root_path)
-    elif args.dataset_type.lower() == "bird":
-        loader = BirdLoader(args.data_path, args.db_root_path)
-    else:
-        raise ValueError(f"Unknown dataset type: {args.dataset_type}")
+    loader = build_loader(args.dataset_type, args.data_path, args.db_root_path)
 
     # 2) Load candidates
-    if not os.path.exists(args.pred_path):
-        raise FileNotFoundError(f"Predicted SQLs file not found: {args.pred_path}")
-    with open(args.pred_path, "r", encoding="utf-8") as f:
-        all_candidates = json.load(f)
-    all_candidates = {str(k): v for k, v in all_candidates.items()}
+    all_candidates = load_candidate_map(args.pred_path)
 
     # 3) Build tasks
     tasks = []
-    for i in tqdm(range(len(loader)), desc="Loading tasks"):
-        item = loader.get_item(i)
-        qid = str(item.question_id)
-        if qid not in all_candidates:
-            continue
-
+    for qid, item, candidates in tqdm(
+        iter_dataset_with_candidates(loader, all_candidates),
+        total=len(all_candidates),
+        desc="Loading tasks",
+    ):
         schema = loader.get_schema(item.db_id)
         schema_text = SchemaExtractor.to_readable_text(
             schema,
@@ -190,28 +178,20 @@ def main():
         tasks.append(
             {
                 "qid": qid,
-                "candidates": all_candidates[qid],
+                "candidates": candidates,
                 "question": item.question,
                 "evidence": item.evidence,
                 "schema_text": schema_text,
             }
         )
 
-    llm_config = {
-        "model_name": args.model_name,
-        "api_key": args.api_key,
-        "base_url": args.base_url,
-        "temperature": args.temperature,
-        "max_tokens": args.max_tokens,
-    }
+    llm_config = build_llm_config(args)
 
     # 4) Parallel USC selection
     logger.info("Starting parallel USC selection for %s samples...", len(tasks))
     selected_sqls: Dict[str, Optional[str]] = {}
 
-    total_prompt_tokens = 0
-    total_completion_tokens = 0
-    count = 0
+    usage_stats = UsageStats()
 
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
         futures = {
@@ -222,27 +202,14 @@ def main():
             selected_sqls[res["qid"]] = res["selected_sql"]
 
             usage = res.get("token_usage", {})
-            total_prompt_tokens += usage.get("prompt_tokens", 0)
-            total_completion_tokens += usage.get("completion_tokens", 0)
-            count += 1
+            usage_stats.update(usage)
 
     # 5) Save
-    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
-    with open(args.output_path, "w", encoding="utf-8") as f:
-        json.dump(selected_sqls, f, indent=4, ensure_ascii=False)
+    save_json(args.output_path, selected_sqls, indent=4)
 
     logger.info("USC selection complete. Results saved to %s", args.output_path)
-    if count > 0:
-        avg_prompt = total_prompt_tokens / count
-        avg_completion = total_completion_tokens / count
-        avg_total = (total_prompt_tokens + total_completion_tokens) / count
-        logger.info("--- Statistics (Average per question) ---")
-        logger.info("Prompt Tokens: %.1f", avg_prompt)
-        logger.info("Completion Tokens: %.1f", avg_completion)
-        logger.info("Total Tokens: %.1f", avg_total)
-        logger.info("----------------------------------------")
+    usage_stats.log_average(logger, label="Statistics")
 
 
 if __name__ == "__main__":
     main()
-

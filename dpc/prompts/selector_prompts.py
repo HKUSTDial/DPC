@@ -12,7 +12,8 @@ Rules:
 1. SQLs in the same group should express the same logical equivalence and should return the same answer in principle.
 2. Use candidate indices exactly as provided (1-based).
 3. Output only groups.
-4. Every candidate index should appear in exactly one group if possible.
+4. Every candidate index must appear exactly once.
+5. If you are uncertain about equivalence, keep candidates in separate singleton groups instead of merging aggressively.
 
 Your output MUST follow this format:
 <thinking>
@@ -36,6 +37,8 @@ Your output MUST follow this format:
 IMPORTANT:
 - The content inside <result> MUST be valid JSON parseable by json.loads().
 - Do NOT include comments.
+- Do NOT omit candidates.
+- Do NOT place one index into multiple groups.
 """
 
 EQUIVALENCE_GROUPER_USER_PROMPT_TEMPLATE = """Database Schema:
@@ -58,4 +61,6 @@ Please correct your output.
 Remember:
 - Keep <result> as strict JSON.
 - Use only provided candidate indices.
+- Every candidate index must appear exactly once.
+- If uncertain, prefer singleton groups.
 """

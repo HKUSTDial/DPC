@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # --- Configuration ---
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"spider"}
 DATA_PATH=${DATA_PATH:-"data/spider/test.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/spider/test_database"}
-CANDIDATES_PATH=${CANDIDATES_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_SPIDER_Test.json"}
+CANDIDATES_PATH=${CANDIDATES_PATH:-"${ARTIFACT_ROOT}/candidates/Qwen2.5-Coder-7B-Instruct_SPIDER_Test.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}
@@ -26,4 +27,3 @@ python evaluation/eval_pass_n.py \
     --timeout "$TIMEOUT" \
     --k "$PASS_K" \
     --num_workers "$NUM_WORKERS"
-

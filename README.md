@@ -93,8 +93,8 @@ python baseline/run_dpc_selection.py \
     --dataset_type bird \
     --data_path data/bird/dev/dev.json \
     --db_root_path data/bird/dev/dev_databases \
-    --pred_sqls_path results/candidates/GPT-4o.json \
-    --output_path results/selected/DPC_Results.json \
+    --pred_sqls_path artifacts/candidates/GPT-4o.json \
+    --output_path artifacts/selected/DPC_Results.json \
     --model_name gpt-4o \
     --num_workers 8
 ```
@@ -109,6 +109,7 @@ python baseline/run_dpc_selection.py \
 
 ```text
 DPC-SQL/
+├── artifacts/          # Local experiment outputs (gitignored)
 ├── dpc/
 │   ├── agents/         # LLM Agents (Slicer, Tester, Solver)
 │   ├── core/           # Main Pipeline logic
@@ -118,6 +119,7 @@ DPC-SQL/
 │   └── utils/          # DB utils, Python Sandbox, Clustering
 ├── baseline/           # Baseline scripts (SC, DPC, LLM-Selection)
 ├── evaluation/         # Evaluation scripts (Execution Accuracy)
+├── results/            # Checked-in snapshots / curated result files
 ├── scripts/            # Helper shell scripts for running experiments
 └── requirements.txt    # Project dependencies
 ```
@@ -138,4 +140,3 @@ DPC-SQL/
 ## 📄 License
 
 This project is licensed under the MIT License.
-

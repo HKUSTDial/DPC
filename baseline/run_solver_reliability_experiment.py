@@ -1,11 +1,9 @@
 import os
 import sys
 import json
-import re
 import math
 import argparse
 import logging
-import signal
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,6 +26,13 @@ logger = logging.getLogger("Solver-Reliability-Exp")
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from baseline.common import (
+    build_loader,
+    init_worker_ignore_sigint,
+    iter_dataset_with_candidates,
+    load_candidate_map,
+    save_json,
+)
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
 from dpc.agents.tester_agent import TesterAgent
@@ -40,10 +45,9 @@ from dpc.utils.clustering import (
     select_champion_and_challenger_from_sql_groups,
 )
 from dpc.utils.schema_utils import SchemaExtractor
-from dpc.datasets.spider_loader import SpiderLoader
-from dpc.datasets.bird_loader import BirdLoader
-from dpc.eval.metrics import DPCEvaluator, normalize_result
+from dpc.eval.metrics import DPCEvaluator
 from dpc.utils.db_utils import execute_sql
+from dpc.utils.response_parser import extract_result_block, parse_json_response
 
 
 ERROR_TAXONOMY = """1. Schema Related
@@ -65,31 +69,7 @@ ERROR_TAXONOMY = """1. Schema Related
 
 
 def init_worker() -> None:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
-
-
-def _extract_result_block(text: str) -> str:
-    start_tag = "<result>"
-    end_tag = "</result>"
-    idx = text.rfind(start_tag)
-    if idx == -1:
-        return text.strip()
-    content = text[idx + len(start_tag):]
-    end_idx = content.find(end_tag)
-    if end_idx != -1:
-        return content[:end_idx].strip()
-    return content.strip()
-
-
-def _extract_json_obj(text: str) -> Dict[str, Any]:
-    body = _extract_result_block(text)
-    body = re.sub(r"^```json\s*", "", body.strip())
-    body = re.sub(r"^```\s*", "", body.strip())
-    body = re.sub(r"\s*```$", "", body.strip())
-    m = re.search(r"\{[\s\S]*\}", body)
-    if not m:
-        raise ValueError("No JSON object found in LLM response.")
-    return json.loads(m.group(0))
+    init_worker_ignore_sigint()
 
 
 def _safe_jsonable_result(x: Any) -> Any:
@@ -211,7 +191,7 @@ def _run_solver_with_trace(
         try:
             response_text = llm.ask(messages)
             messages.append({"role": "assistant", "content": response_text})
-            code = _extract_result_block(response_text)
+            code = extract_result_block(response_text)
             exec_result = PythonExecutor.execute(test_data, code, timeout=python_timeout)
             if isinstance(exec_result, str) and ("Traceback" in exec_result or exec_result.startswith("Error:")):
                 if attempt < max_correction_attempts:
@@ -308,7 +288,7 @@ Return strict JSON:
   "is_correct": true/false
 }}
 """
-    parsed = _extract_json_obj(llm.ask([{"role": "user", "content": prompt}]))
+    parsed = parse_json_response(llm.ask([{"role": "user", "content": prompt}]))
     return {
         "reason": str(parsed.get("reason", "")),
         "is_correct": bool(parsed.get("is_correct", False)),
@@ -352,7 +332,7 @@ Return strict JSON:
   "is_equivalent": true/false
 }}
 """
-    parsed = _extract_json_obj(llm.ask([{"role": "user", "content": prompt}]))
+    parsed = parse_json_response(llm.ask([{"role": "user", "content": prompt}]))
     return {
         "reason": str(parsed.get("reason", "")),
         "is_equivalent": bool(parsed.get("is_equivalent", False)),
@@ -670,21 +650,12 @@ def main() -> None:
     except RuntimeError:
         pass
 
-    if args.dataset_type == "bird":
-        loader = BirdLoader(args.data_path, args.db_root_path)
-    else:
-        loader = SpiderLoader(args.data_path, args.db_root_path)
+    loader = build_loader(args.dataset_type, args.data_path, args.db_root_path)
 
-    with open(args.pred_sqls_path, "r", encoding="utf-8") as f:
-        all_candidates = json.load(f)
-    all_candidates = {str(k): v for k, v in all_candidates.items()}
+    all_candidates = load_candidate_map(args.pred_sqls_path)
 
     tasks = []
-    for i in range(len(loader)):
-        item = loader.get_item(i)
-        qid = str(item.question_id)
-        if qid not in all_candidates:
-            continue
+    for qid, item, candidate_sqls in iter_dataset_with_candidates(loader, all_candidates):
         tasks.append(
             {
                 "qid": qid,
@@ -693,7 +664,7 @@ def main() -> None:
                 "evidence": item.evidence,
                 "gold_sql": item.ground_truth,
                 "db_path": loader.get_db_path(item.db_id),
-                "candidate_sqls": all_candidates[qid],
+                "candidate_sqls": candidate_sqls,
             }
         )
 
@@ -708,17 +679,8 @@ def main() -> None:
 
     summary = summarize(results)
 
-    out_dir = os.path.dirname(args.output_path)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
-    with open(args.output_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-
-    sum_dir = os.path.dirname(args.summary_output_path)
-    if sum_dir:
-        os.makedirs(sum_dir, exist_ok=True)
-    with open(args.summary_output_path, "w", encoding="utf-8") as f:
-        json.dump(summary, f, indent=2, ensure_ascii=False)
+    save_json(args.output_path, results, indent=2)
+    save_json(args.summary_output_path, summary, indent=2)
 
     logger.info("Summary:\n%s", json.dumps(summary, indent=2, ensure_ascii=False))
     logger.info("Saved per-sample results to %s", args.output_path)
@@ -727,4 +689,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

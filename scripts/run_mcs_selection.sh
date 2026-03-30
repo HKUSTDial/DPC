@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # --- Configuration ---
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-CANDIDATES_PATH=${CANDIDATES_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_MCS.json"}
+CANDIDATES_PATH=${CANDIDATES_PATH:-"${ARTIFACT_ROOT}/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/temp/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_MCS.json"}
 
 # --- LLM Configuration ---
 MODEL_NAME=${MODEL_NAME:-"qwen2.5-coder-7b-instruct"}
@@ -49,4 +50,3 @@ fi
 
 # Run the script
 python baseline/run_mcs_selection.py "${CMD_ARGS[@]}"
-

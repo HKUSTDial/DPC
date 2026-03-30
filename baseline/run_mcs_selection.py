@@ -1,25 +1,29 @@
 import os
 import sys
-import json
 import argparse
 import logging
 import sqlite3
 import threading
 import time
-import multiprocessing
-import re
 from collections import Counter, defaultdict
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from typing import List, Dict, Any, Tuple, Optional
 
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dpc.datasets.spider_loader import SpiderLoader
-from dpc.datasets.bird_loader import BirdLoader
+from baseline.common import (
+    UsageStats,
+    build_llm_config,
+    build_loader,
+    iter_dataset_with_candidates,
+    load_candidate_map,
+    save_json,
+)
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.utils.schema_utils import SchemaExtractor
+from dpc.utils.response_parser import parse_json_response
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -145,13 +149,8 @@ def process_sample_mcs(task: Dict[str, Any], llm_config: Dict[str, Any]) -> Dict
     for _ in range(5):
         try:
             res_text = llm.ask([{"role": "user", "content": prompt}])
-            # Simple JSON extraction
-            json_match = re.search(r'\{.*\}', res_text, re.DOTALL)
-            if json_match:
-                parsed = json.loads(json_match.group(0))
-                responses.append(parsed.get("sql", filtered_candidates[0]))
-            else:
-                responses.append(filtered_candidates[0])
+            parsed = parse_json_response(res_text)
+            responses.append(parsed.get("sql", filtered_candidates[0]))
         except Exception:
             responses.append(filtered_candidates[0])
             
@@ -195,34 +194,25 @@ def main():
     args = parser.parse_args()
 
     # 1. Load Dataset
-    if args.dataset_type.lower() == "spider":
-        loader = SpiderLoader(args.data_path, args.db_root_path)
-    elif args.dataset_type.lower() == "bird":
-        loader = BirdLoader(args.data_path, args.db_root_path)
-    else:
-        raise ValueError(f"Unknown dataset type: {args.dataset_type}")
+    loader = build_loader(args.dataset_type, args.data_path, args.db_root_path)
 
     # 2. Load Candidates
-    with open(args.pred_path, 'r', encoding='utf-8') as f:
-        all_candidates = json.load(f)
-    all_candidates = {str(k): v for k, v in all_candidates.items()}
+    all_candidates = load_candidate_map(args.pred_path)
 
     # 3. Prepare Tasks
     tasks = []
-    for i in tqdm(range(len(loader)), desc="Loading tasks"):
-        item = loader.get_item(i)
-        qid = str(item.question_id)
-        
-        if qid not in all_candidates:
-            continue
-            
+    for qid, item, candidates in tqdm(
+        iter_dataset_with_candidates(loader, all_candidates),
+        total=len(all_candidates),
+        desc="Loading tasks",
+    ):
         db_path = loader.get_db_path(item.db_id)
         schema = loader.get_schema(item.db_id)
         schema_text = SchemaExtractor.to_readable_text(schema, include_stats=False, include_examples=False, include_descriptions=False)
         
         tasks.append({
             "qid": qid,
-            "candidates": all_candidates[qid],
+            "candidates": candidates,
             "db_path": db_path,
             "sql_timeout": args.timeout,
             "question": item.question,
@@ -231,21 +221,13 @@ def main():
         })
 
     # 4. LLM Config
-    llm_config = {
-        "model_name": args.model_name,
-        "api_key": args.api_key,
-        "base_url": args.base_url,
-        "temperature": args.temperature,
-        "max_tokens": args.max_tokens
-    }
+    llm_config = build_llm_config(args)
 
     # 5. Parallel Processing
     selected_sqls = {}
     logger.info(f"Starting parallel MCS selection for {len(tasks)} samples...")
     
-    total_prompt_tokens = 0
-    total_completion_tokens = 0
-    count = 0
+    usage_stats = UsageStats()
 
     # Note: Using ThreadPoolExecutor because LLM calls are I/O bound
     with ThreadPoolExecutor(max_workers=args.num_workers) as executor:
@@ -256,26 +238,13 @@ def main():
             
             # Aggregate stats
             usage = res.get("token_usage", {})
-            total_prompt_tokens += usage.get("prompt_tokens", 0)
-            total_completion_tokens += usage.get("completion_tokens", 0)
-            count += 1
+            usage_stats.update(usage)
 
     # 6. Save Results
-    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
-    with open(args.output_path, 'w', encoding='utf-8') as f:
-        json.dump(selected_sqls, f, indent=4, ensure_ascii=False)
+    save_json(args.output_path, selected_sqls, indent=4)
     
     logger.info(f"MCS selection complete. Results saved to {args.output_path}")
-
-    if count > 0:
-        avg_prompt = total_prompt_tokens / count
-        avg_completion = total_completion_tokens / count
-        avg_total = (total_prompt_tokens + total_completion_tokens) / count
-        logger.info(f"--- Statistics (Average per question) ---")
-        logger.info(f"Prompt Tokens: {avg_prompt:.1f}")
-        logger.info(f"Completion Tokens: {avg_completion:.1f}")
-        logger.info(f"Total Tokens: {avg_total:.1f}")
-        logger.info(f"----------------------------------------")
+    usage_stats.log_average(logger, label="Statistics")
 
 if __name__ == "__main__":
     main()

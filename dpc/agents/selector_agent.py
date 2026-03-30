@@ -110,32 +110,50 @@ class EquivalenceGrouperAgent(BaseAgent):
 
         assigned = set()
         normalized: List[List[int]] = []
+        errors: List[str] = []
 
-        for g in groups:
+        if not groups:
+            raise ValueError("groups must not be empty.")
+
+        for group_idx, g in enumerate(groups, start=1):
             if not isinstance(g, dict):
+                errors.append(f"Group {group_idx} must be a JSON object.")
                 continue
             members = g.get("member_indices")
             if not isinstance(members, list):
+                errors.append(f"Group {group_idx} must contain a member_indices list.")
                 continue
 
             clean_members: List[int] = []
+            seen_in_group = set()
             for idx in members:
                 if not isinstance(idx, int):
+                    errors.append(f"Group {group_idx} contains non-integer index: {idx!r}.")
                     continue
                 if idx < 1 or idx > n_candidates:
+                    errors.append(f"Group {group_idx} contains out-of-range index: {idx}.")
+                    continue
+                if idx in seen_in_group:
+                    errors.append(f"Group {group_idx} contains duplicate index: {idx}.")
                     continue
                 if idx in assigned:
+                    errors.append(f"Candidate index {idx} appears in more than one group.")
                     continue
+                seen_in_group.add(idx)
                 assigned.add(idx)
                 clean_members.append(idx)
 
             if clean_members:
-                normalized.append(clean_members)
+                normalized.append(sorted(clean_members))
+            else:
+                errors.append(f"Group {group_idx} has no valid member indices.")
 
-        # Add missing indices as singleton groups for full coverage.
-        for idx in range(1, n_candidates + 1):
-            if idx not in assigned:
-                normalized.append([idx])
+        missing = [idx for idx in range(1, n_candidates + 1) if idx not in assigned]
+        if missing:
+            errors.append(f"Missing candidate indices: {missing}. Every candidate must appear exactly once.")
+
+        if errors:
+            raise ValueError("Invalid grouping response:\n- " + "\n- ".join(errors))
 
         # Deterministic ordering: larger groups first, then smallest index.
         normalized.sort(key=lambda g: (-len(g), min(g)))

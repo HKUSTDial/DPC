@@ -26,12 +26,18 @@ logger = logging.getLogger("MDD-Generation")
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from baseline.common import (
+    build_loader,
+    init_worker_ignore_sigint,
+    iter_dataset_with_candidates,
+    load_candidate_map,
+    save_json,
+    save_json_atomic,
+)
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
 from dpc.agents.tester_agent import TesterAgent
 from dpc.agents.selector_agent import EquivalenceGrouperAgent
-from dpc.datasets.spider_loader import SpiderLoader
-from dpc.datasets.bird_loader import BirdLoader
 from dpc.utils.clustering import (
     cluster_sql_candidates,
     select_champion_and_challenger,
@@ -43,7 +49,7 @@ DISTINGUISH_FAILURE_KEYWORD = "Tester failed to generate distinguishing data aft
 
 
 def init_worker() -> None:
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    init_worker_ignore_sigint()
 
 
 def process_sample(item_data: Dict[str, Any], candidate_sqls: List[str], args: argparse.Namespace) -> Dict[str, Any]:
@@ -280,26 +286,14 @@ def main() -> None:
         pass
 
     # Load dataset
-    if args.dataset_type.lower() == "spider":
-        loader = SpiderLoader(args.data_path, args.db_root_path)
-    elif args.dataset_type.lower() == "bird":
-        loader = BirdLoader(args.data_path, args.db_root_path)
-    else:
-        raise ValueError(f"Unknown dataset type: {args.dataset_type}")
+    loader = build_loader(args.dataset_type, args.data_path, args.db_root_path)
 
     # Load candidates
-    if not os.path.exists(args.pred_sqls_path):
-        raise FileNotFoundError(f"Predicted SQLs file not found: {args.pred_sqls_path}")
-    with open(args.pred_sqls_path, "r", encoding="utf-8") as f:
-        all_pred_sqls = json.load(f)
+    all_pred_sqls = load_candidate_map(args.pred_sqls_path)
 
     # Prepare tasks
     tasks = []
-    for i in range(len(loader)):
-        item = loader.get_item(i)
-        qid = str(item.question_id)
-        if qid not in all_pred_sqls:
-            continue
+    for qid, item, candidate_sqls in iter_dataset_with_candidates(loader, all_pred_sqls):
         tasks.append(
             {
                 "item_data": {
@@ -309,7 +303,7 @@ def main() -> None:
                     "evidence": item.evidence,
                     "difficulty": item.difficulty or "unknown",
                 },
-                "candidate_sqls": all_pred_sqls[qid],
+                "candidate_sqls": candidate_sqls,
             }
         )
 
@@ -353,11 +347,7 @@ def main() -> None:
                     logger.error("Sample %s failed: %s", qid, res.get("error"))
 
                 try:
-                    out_dir = os.path.dirname(output_path)
-                    if out_dir:
-                        os.makedirs(out_dir, exist_ok=True)
-                    with open(output_path, "w", encoding="utf-8") as f:
-                        json.dump(results, f, indent=4, ensure_ascii=False)
+                    save_json_atomic(output_path, results, indent=4)
                 except Exception as e:
                     logger.error("Failed to save output for %s: %s", qid, e)
         except KeyboardInterrupt:
@@ -407,11 +397,7 @@ def main() -> None:
             stats_output_path = output_path + "_stats.json"
 
     try:
-        stats_dir = os.path.dirname(stats_output_path)
-        if stats_dir:
-            os.makedirs(stats_dir, exist_ok=True)
-        with open(stats_output_path, "w", encoding="utf-8") as f:
-            json.dump(stats, f, indent=4, ensure_ascii=False)
+        save_json(stats_output_path, stats, indent=4)
         logger.info("Saved stats to %s", stats_output_path)
     except Exception as e:
         logger.error("Failed to save stats JSON: %s", e)
@@ -419,4 +405,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

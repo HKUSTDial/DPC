@@ -2,11 +2,12 @@
 
 # --- Configuration ---
 # Use the output of your generation baseline as PRE_PATH
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-PRED_PATH=${PRED_PATH:-"results/candidates/GPT-5_BIRD_Mini_Dev.json"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/selected/GPT-5_BIRD_Mini_Dev_SC.json"}
+PRED_PATH=${PRED_PATH:-"${ARTIFACT_ROOT}/candidates/GPT-5_BIRD_Mini_Dev.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/selected/GPT-5_BIRD_Mini_Dev_SC.json"}
 NUM_WORKERS=${NUM_WORKERS:-8}
 TIMEOUT=${TIMEOUT:-30}
 
@@ -24,4 +25,3 @@ python baseline/run_sc_selection.py \
     --output_path "$OUTPUT_PATH" \
     --num_workers "$NUM_WORKERS" \
     --timeout "$TIMEOUT"
-

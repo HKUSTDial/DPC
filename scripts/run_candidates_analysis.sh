@@ -25,6 +25,7 @@
 set -e  # Exit on error
 
 # --- Configuration ---
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 MODEL_NAME=${MODEL_NAME:-"qwen2.5-coder-7b-instruct"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -48,7 +49,7 @@ if [ -z "$DATASET_NAME" ]; then
 fi
 
 # Create analysis output directory
-ANALYSIS_DIR="results/analysis"
+ANALYSIS_DIR="${ARTIFACT_ROOT}/analysis"
 mkdir -p "$ANALYSIS_DIR"
 
 echo "=============================================================================="
@@ -73,7 +74,7 @@ for N in $NUM_CANDIDATES_LIST; do
     
     # Step 1: Generate baseline candidates with N candidates
     echo "[Step 1/3] Generating $N SQL candidates..."
-    TEMP_CANDIDATES_FILE="results/candidates/${MODEL_NAME}_${DATASET_NAME}_N${N}.json"
+    TEMP_CANDIDATES_FILE="${ARTIFACT_ROOT}/candidates/${MODEL_NAME}_${DATASET_NAME}_N${N}.json"
     
     NUM_CANDIDATES=$N \
     DATASET_TYPE="$DATASET_TYPE" \
@@ -151,4 +152,3 @@ for N in $NUM_CANDIDATES_LIST; do
     echo "    - ${ANALYSIS_DIR}/${MODEL_NAME}_${DATASET_NAME}_DPC_N-Candidates-${N}.json"
 done
 echo "=============================================================================="
-

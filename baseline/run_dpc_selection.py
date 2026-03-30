@@ -28,21 +28,27 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
+from baseline.common import (
+    UsageStats,
+    build_loader,
+    init_worker_ignore_sigint,
+    iter_dataset_with_candidates,
+    load_candidate_map,
+    save_json_atomic,
+)
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
 from dpc.agents.tester_agent import TesterAgent
 from dpc.agents.solver_agent import PythonSolverAgent
 from dpc.agents.selector_agent import EquivalenceGrouperAgent
 from dpc.core.pipeline import DPCPipeline
-from dpc.datasets.spider_loader import SpiderLoader
-from dpc.datasets.bird_loader import BirdLoader
 
 def init_worker():
     """
     Initialize worker process to ignore SIGINT (Ctrl+C).
     This allows the main process to handle the interrupt and clean up.
     """
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    init_worker_ignore_sigint()
 
 def process_sample(item_data: Dict[str, Any], candidate_sqls: List[str], args: argparse.Namespace) -> Dict[str, Any]:
     """
@@ -149,34 +155,23 @@ def main():
         pass
     
     # Load Dataset
-    if args.dataset_type.lower() == "spider":
-        loader = SpiderLoader(args.data_path, args.db_root_path)
-    elif args.dataset_type.lower() == "bird":
-        loader = BirdLoader(args.data_path, args.db_root_path)
-    else:
-        raise ValueError(f"Unknown dataset type: {args.dataset_type}")
+    loader = build_loader(args.dataset_type, args.data_path, args.db_root_path)
 
     # Load Predicted SQLs
-    if not os.path.exists(args.pred_sqls_path):
-        raise FileNotFoundError(f"Predicted SQLs file not found: {args.pred_sqls_path}")
-    
-    with open(args.pred_sqls_path, 'r', encoding='utf-8') as f:
-        all_pred_sqls = json.load(f)
+    all_pred_sqls = load_candidate_map(args.pred_sqls_path)
 
     # Prepare Tasks
     tasks = []
-    for i in range(len(loader)):
-        item = loader.get_item(i)
-        if str(item.question_id) in all_pred_sqls:
-            tasks.append({
-                "item_data": {
-                    "question_id": item.question_id,
-                    "question": item.question,
-                    "db_path": loader.get_db_path(item.db_id),
-                    "evidence": item.evidence
-                },
-                "candidate_sqls": all_pred_sqls[str(item.question_id)]
-            })
+    for _, item, candidate_sqls in iter_dataset_with_candidates(loader, all_pred_sqls):
+        tasks.append({
+            "item_data": {
+                "question_id": item.question_id,
+                "question": item.question,
+                "db_path": loader.get_db_path(item.db_id),
+                "evidence": item.evidence
+            },
+            "candidate_sqls": candidate_sqls
+        })
 
     logger.info(f"Loaded {len(tasks)} samples from dataset.")
 
@@ -211,9 +206,7 @@ def main():
     
     executor = ProcessPoolExecutor(max_workers=num_workers, initializer=init_worker)
     
-    total_prompt_tokens = 0
-    total_completion_tokens = 0
-    count = 0
+    usage_stats = UsageStats()
 
     try:
         futures = {executor.submit(process_sample, t["item_data"], t["candidate_sqls"], args): t for t in tasks_to_run}
@@ -227,19 +220,14 @@ def main():
                 
                 # Aggregate stats for console output
                 usage = res["result"].get("token_usage", {})
-                total_prompt_tokens += usage.get("prompt_tokens", 0)
-                total_completion_tokens += usage.get("completion_tokens", 0)
-                count += 1
+                usage_stats.update(usage)
             else:
                 results[qid] = None
                 logger.error(f"Sample {qid} failed: {res.get('error')}")
             
             # Real-time saving to disk
             try:
-                if os.path.dirname(output_path):
-                    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                with open(output_path, 'w', encoding='utf-8') as f:
-                    json.dump(results, f, indent=4, ensure_ascii=False)
+                save_json_atomic(output_path, results, indent=4)
             except Exception as e:
                 logger.error(f"Failed to save real-time results for ID {qid}: {e}")
     except KeyboardInterrupt:
@@ -256,15 +244,7 @@ def main():
     success_count = sum(1 for sql in results.values() if sql is not None)
     logger.info(f"Batch processing completed. Total processed: {len(results)}. Success (non-null): {success_count}/{len(results)}")
     
-    if count > 0:
-        avg_prompt = total_prompt_tokens / count
-        avg_completion = total_completion_tokens / count
-        avg_total = (total_prompt_tokens + total_completion_tokens) / count
-        logger.info(f"--- Statistics (Average per question in this run) ---")
-        logger.info(f"Prompt Tokens: {avg_prompt:.1f}")
-        logger.info(f"Completion Tokens: {avg_completion:.1f}")
-        logger.info(f"Total Tokens: {avg_total:.1f}")
-        logger.info(f"---------------------------------------------------")
+    usage_stats.log_average(logger, label="Statistics")
 
     logger.info(f"All results are permanently saved to {output_path}")
 

@@ -2,13 +2,14 @@
 
 # --- Configuration ---
 # You can override these variables or pass them as environment variables
+ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
 DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-CANDIDATE_PATH=${CANDIDATE_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
-SC_PRED_PATH=${SC_PRED_PATH:-"results/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_SC.json"}
-DPC_PRED_PATH=${DPC_PRED_PATH:-"results/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_DPC.json"}
-OUTPUT_PATH=${OUTPUT_PATH:-"results/analysis/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_majority_analysis.json"}
+CANDIDATE_PATH=${CANDIDATE_PATH:-"${ARTIFACT_ROOT}/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
+SC_PRED_PATH=${SC_PRED_PATH:-"${ARTIFACT_ROOT}/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_SC.json"}
+DPC_PRED_PATH=${DPC_PRED_PATH:-"${ARTIFACT_ROOT}/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_DPC.json"}
+OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/analysis/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_majority_analysis.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}
@@ -39,4 +40,3 @@ CMD_ARGS=(
 
 # Run the analysis script
 python baseline/run_majority_analysis.py "${CMD_ARGS[@]}"
-
