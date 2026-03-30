@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # --- Configuration ---
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -49,4 +50,4 @@ if [ -n "$BASE_URL" ]; then
 fi
 
 # Run the script
-python baseline/run_mcs_selection.py "${CMD_ARGS[@]}"
+"$PYTHON_BIN" baseline/run_mcs_selection.py "${CMD_ARGS[@]}"

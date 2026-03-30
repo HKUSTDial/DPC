@@ -2,6 +2,7 @@
 
 # --- Configuration ---
 # You can override these variables or pass them as environment variables
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -39,4 +40,4 @@ CMD_ARGS=(
 )
 
 # Run the analysis script
-python baseline/run_majority_analysis.py "${CMD_ARGS[@]}"
+"$PYTHON_BIN" baseline/run_majority_analysis.py "${CMD_ARGS[@]}"

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # --- Configuration ---
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -46,4 +47,4 @@ if [ -n "$BASE_URL" ]; then
     CMD_ARGS+=(--base_url "$BASE_URL")
 fi
 
-python baseline/run_sql_generation_with_omnisql.py "${CMD_ARGS[@]}"
+"$PYTHON_BIN" baseline/run_sql_generation_with_omnisql.py "${CMD_ARGS[@]}"

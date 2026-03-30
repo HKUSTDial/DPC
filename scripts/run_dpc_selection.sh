@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # --- Dataset Configuration ---
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -25,12 +26,17 @@ EPSILON=${EPSILON:-0.0}
 MAX_CORRECTION_ATTEMPTS=${MAX_CORRECTION_ATTEMPTS:-0}
 NUM_TEST_DATA=${NUM_TEST_DATA:-3}
 NUM_SOLVER_ATTEMPTS=${NUM_SOLVER_ATTEMPTS:-3}
+NUM_GROUPING_ATTEMPTS=${NUM_GROUPING_ATTEMPTS:-1}
+PHASE1_SELECTION_MODE=${PHASE1_SELECTION_MODE:-"execution"}
+EVAL_METRIC=${EVAL_METRIC:-"bs_f1"}
 
 echo "Starting DPC-SQL Pipeline..."
 echo "Dataset: $DATASET_TYPE"
 echo "Input: $PRED_SQLS_PATH"
 echo "Output: $OUTPUT_PATH"
 echo "Model: $MODEL_NAME"
+echo "Phase1 Mode: $PHASE1_SELECTION_MODE"
+echo "Eval Metric: $EVAL_METRIC"
 
 # Build command arguments
 CMD_ARGS=(
@@ -51,6 +57,9 @@ CMD_ARGS=(
     --max_correction_attempts "$MAX_CORRECTION_ATTEMPTS"
     --num_test_data "$NUM_TEST_DATA"
     --num_solver_attempts "$NUM_SOLVER_ATTEMPTS"
+    --num_grouping_attempts "$NUM_GROUPING_ATTEMPTS"
+    --phase1_selection_mode "$PHASE1_SELECTION_MODE"
+    --eval_metric "$EVAL_METRIC"
 )
 
 # Add API Key and Base URL if provided
@@ -62,4 +71,4 @@ if [ -n "$BASE_URL" ]; then
     CMD_ARGS+=(--base_url "$BASE_URL")
 fi
 
-python baseline/run_dpc_selection.py "${CMD_ARGS[@]}"
+"$PYTHON_BIN" baseline/run_dpc_selection.py "${CMD_ARGS[@]}"

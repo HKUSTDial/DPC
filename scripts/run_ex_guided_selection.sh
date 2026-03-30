@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # --- Configuration ---
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -18,7 +19,7 @@ echo "Output: $OUTPUT_PATH"
 echo "Workers: $NUM_WORKERS"
 
 # Run the script
-python baseline/run_ex_guided_selection.py \
+"$PYTHON_BIN" baseline/run_ex_guided_selection.py \
     --dataset_type "$DATASET_TYPE" \
     --data_path "$DATA_PATH" \
     --db_root_path "$DB_ROOT_PATH" \

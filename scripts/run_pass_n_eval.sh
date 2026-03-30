@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # --- Configuration ---
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"spider"}
 DATA_PATH=${DATA_PATH:-"data/spider/test.json"}
@@ -19,7 +20,7 @@ echo "Pass@K: $PASS_K"
 echo "Workers: $NUM_WORKERS"
 
 # Run the evaluation script
-python evaluation/eval_pass_n.py \
+"$PYTHON_BIN" evaluation/eval_pass_n.py \
     --dataset_type "$DATASET_TYPE" \
     --data_path "$DATA_PATH" \
     --db_root_path "$DB_ROOT_PATH" \

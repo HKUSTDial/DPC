@@ -2,6 +2,7 @@
 
 # --- Configuration ---
 # Use the output of your generation baseline as PRE_PATH
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"bird"}
 DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
@@ -17,7 +18,7 @@ echo "Input Candidates: $PRED_PATH"
 echo "Output Selected: $OUTPUT_PATH"
 echo "Workers: $NUM_WORKERS"
 
-python baseline/run_sc_selection.py \
+"$PYTHON_BIN" baseline/run_sc_selection.py \
     --pred_path "$PRED_PATH" \
     --dataset_type "$DATASET_TYPE" \
     --data_path "$DATA_PATH" \

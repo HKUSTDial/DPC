@@ -2,6 +2,7 @@
 
 # --- Configuration ---
 # You can override these variables or pass them as environment variables
+PYTHON_BIN=${PYTHON_BIN:-"python3"}
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 DATASET_TYPE=${DATASET_TYPE:-"spider"}
 DATA_PATH=${DATA_PATH:-"data/spider/test.json"}
@@ -46,4 +47,4 @@ if [ -n "$BASE_URL" ]; then
     CMD_ARGS+=(--base_url "$BASE_URL")
 fi
 
-python baseline/run_sql_generation.py "${CMD_ARGS[@]}"
+"$PYTHON_BIN" baseline/run_sql_generation.py "${CMD_ARGS[@]}"
