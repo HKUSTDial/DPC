@@ -197,12 +197,37 @@ class DPCEvaluator:
     Evaluator that standardizes different output formats and computes Soft-F1.
     """
     @staticmethod
-    def evaluate(pred: Any, gold: Any) -> float:
+    def evaluate(pred: Any, gold: Any, metric: str = "bs_f1") -> float:
         """
         Main entry point for comparison.
         pred and gold can be DataFrame, List[Tuple], or Scalar.
         """
-        norm_pred = normalize_result(pred)
-        norm_gold = normalize_result(gold)
-        return calculate_soft_f1(norm_pred, norm_gold)
+        metric = metric.lower()
+
+        if metric == "bs_f1":
+            norm_pred = normalize_result(pred)
+            norm_gold = normalize_result(gold)
+            return calculate_soft_f1(norm_pred, norm_gold)
+        if metric == "ex":
+            # Traditional EX: strict set(tuple(rows)) equivalence without value normalization.
+            def to_raw_row_set(x: Any) -> Set[Tuple[Any, ...]]:
+                if x is None:
+                    return set()
+                if isinstance(x, pd.DataFrame):
+                    rows = x.values.tolist()
+                elif isinstance(x, list):
+                    rows = x
+                else:
+                    rows = [[x]]
+
+                out = set()
+                for row in rows:
+                    if isinstance(row, (list, tuple)):
+                        out.add(tuple(row))
+                    else:
+                        out.add((row,))
+                return out
+
+            return 1.0 if to_raw_row_set(pred) == to_raw_row_set(gold) else 0.0
+        raise ValueError(f"Unsupported metric: {metric}. Expected one of ['bs_f1', 'ex'].")
 

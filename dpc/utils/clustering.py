@@ -17,6 +17,18 @@ class ExecutionGroup:
         """Pick the shortest SQL as the representative (heuristic for simplicity)."""
         return min(self.sql_list, key=len)
 
+class LogicalGroup:
+    """
+    Represents a semantic-equivalence SQL group without execution results.
+    """
+    def __init__(self, sql_list: List[str]):
+        self.sql_list = sql_list
+        self.size = len(sql_list)
+
+    @property
+    def representative_sql(self) -> str:
+        return min(self.sql_list, key=len)
+
 def cluster_sql_candidates(db_path: str, candidate_sqls: List[str], timeout: int = 30) -> List[ExecutionGroup]:
     """
     Groups candidate SQLs by their execution results on the database.
@@ -70,3 +82,14 @@ def select_champion_and_challenger(groups: List[ExecutionGroup]) -> Tuple[Option
     
     return champion, challenger
 
+def select_champion_and_challenger_from_sql_groups(sql_groups: List[List[str]]) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Selects champion/challenger from SQL groups (already merged by equivalence logic).
+    """
+    groups = [LogicalGroup(group) for group in sql_groups if group]
+    groups.sort(key=lambda g: g.size, reverse=True)
+    if not groups:
+        return None, None
+    champion = groups[0].representative_sql
+    challenger = groups[1].representative_sql if len(groups) > 1 else None
+    return champion, challenger

@@ -56,6 +56,7 @@ def process_sample_pass_n(task: Dict[str, Any]) -> Dict[str, Any]:
     gold_sql = task["gold_sql"]
     db_path = task["db_path"]
     sql_timeout = task["sql_timeout"]
+    k = task["k"]
 
     # 1. Execute Gold SQL to get correct result
     gold_res = execute_sql(gold_sql, db_path, timeout=sql_timeout)
@@ -75,36 +76,30 @@ def process_sample_pass_n(task: Dict[str, Any]) -> Dict[str, Any]:
     sorted_groups = [res for res, count in result_to_count.most_common()]
 
     # 4. Calculate metrics
-    pass1 = False
-    pass2 = False
+    pass_at = [False] * max(1, k)
     upper_bound = False
 
     if gold_res is not None:
         gold_key = frozenset(gold_res)
         upper_bound = (gold_key in all_results)
-        
-        if len(sorted_groups) >= 1:
-            pass1 = (sorted_groups[0] == gold_key)
-        
-        if len(sorted_groups) >= 2:
-            pass2 = (sorted_groups[0] == gold_key or sorted_groups[1] == gold_key)
-        else:
-            pass2 = pass1
+        for i in range(1, max(1, k) + 1):
+            top_i = sorted_groups[:i]
+            pass_at[i - 1] = (gold_key in top_i)
     
     return {
         "qid": qid,
-        "pass1": pass1,
-        "pass2": pass2,
+        "pass_at": pass_at,
         "upper_bound": upper_bound
     }
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate Pass@N and Upper Bound for SQL candidates.")
+    parser = argparse.ArgumentParser(description="Evaluate Pass@K and Upper Bound for SQL candidates.")
     parser.add_argument("--candidates_path", type=str, required=True, help="Path to candidate SQLs JSON file.")
     parser.add_argument("--dataset_type", type=str, choices=["spider", "bird"], required=True, help="Type of dataset.")
     parser.add_argument("--data_path", type=str, required=True, help="Path to dataset file.")
     parser.add_argument("--db_root_path", type=str, required=True, help="Path to database root directory.")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout for SQL execution.")
+    parser.add_argument("--k", type=int, default=2, help="Top-K groups for Pass@K (default: 2)")
     parser.add_argument("--num_workers", type=int, default=min(multiprocessing.cpu_count(), 8), help="Number of parallel workers.")
     
     args = parser.parse_args()
@@ -138,13 +133,13 @@ def main():
             "candidate_sqls": candidates_map[qid],
             "gold_sql": item.ground_truth,
             "db_path": loader.get_db_path(item.db_id),
-            "sql_timeout": args.timeout
+            "sql_timeout": args.timeout,
+            "k": args.k
         })
 
     # 4. Parallel Evaluation
     total = len(tasks)
-    pass1_correct = 0
-    pass2_correct = 0
+    pass_correct = [0] * max(1, args.k)
     ub_correct = 0
     
     logger.info(f"Starting Pass@N evaluation for {total} samples...")
@@ -153,13 +148,10 @@ def main():
         futures = {executor.submit(process_sample_pass_n, task): task for task in tasks}
         for future in tqdm(as_completed(futures), total=total, desc="Evaluating Pass@N"):
             res = future.result()
-            is_pass1 = res.get("pass1")
-            is_pass2 = res.get("pass2")
-            
-            if is_pass1:
-                pass1_correct += 1
-            if is_pass2:
-                pass2_correct += 1
+            pass_at = res.get("pass_at", [])
+            for i in range(min(len(pass_at), len(pass_correct))):
+                if pass_at[i]:
+                    pass_correct[i] += 1
             
             if res.get("upper_bound"):
                 ub_correct += 1
@@ -170,8 +162,9 @@ def main():
 
     logger.info("=" * 40)
     logger.info(f"Evaluation Results (N={total}):")
-    logger.info(f"Pass@1 (SC):    {get_acc(pass1_correct, total):.2f}% ({pass1_correct}/{total})")
-    logger.info(f"Pass@2 (SC):    {get_acc(pass2_correct, total):.2f}% ({pass2_correct}/{total})")
+    for i in range(1, max(1, args.k) + 1):
+        c = pass_correct[i - 1]
+        logger.info(f"Pass@{i} (SC):    {get_acc(c, total):.2f}% ({c}/{total})")
     logger.info(f"Upper Bound:     {get_acc(ub_correct, total):.2f}% ({ub_correct}/{total})")
     logger.info("=" * 40)
 

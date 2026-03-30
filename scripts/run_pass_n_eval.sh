@@ -1,18 +1,20 @@
 #!/bin/bash
 
 # --- Configuration ---
-DATASET_TYPE=${DATASET_TYPE:-"bird"}
-DATA_PATH=${DATA_PATH:-"data/bird/dev/mini_dev.json"}
-DB_ROOT_PATH=${DB_ROOT_PATH:-"data/bird/dev/dev_databases"}
-CANDIDATES_PATH=${CANDIDATES_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
+DATASET_TYPE=${DATASET_TYPE:-"spider"}
+DATA_PATH=${DATA_PATH:-"data/spider/test.json"}
+DB_ROOT_PATH=${DB_ROOT_PATH:-"data/spider/test_database"}
+CANDIDATES_PATH=${CANDIDATES_PATH:-"results/candidates/Qwen2.5-Coder-7B-Instruct_SPIDER_Test.json"}
 
 # --- Execution Configuration ---
 TIMEOUT=${TIMEOUT:-30}
+PASS_K=${PASS_K:-2}
 NUM_WORKERS=${NUM_WORKERS:-8}
 
 echo "Starting Pass@N Evaluation..."
 echo "Dataset: $DATASET_TYPE"
 echo "Candidates: $CANDIDATES_PATH"
+echo "Pass@K: $PASS_K"
 echo "Workers: $NUM_WORKERS"
 
 # Run the evaluation script
@@ -22,5 +24,6 @@ python evaluation/eval_pass_n.py \
     --db_root_path "$DB_ROOT_PATH" \
     --candidates_path "$CANDIDATES_PATH" \
     --timeout "$TIMEOUT" \
+    --k "$PASS_K" \
     --num_workers "$NUM_WORKERS"
 

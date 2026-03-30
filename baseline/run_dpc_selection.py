@@ -32,6 +32,7 @@ from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
 from dpc.agents.tester_agent import TesterAgent
 from dpc.agents.solver_agent import PythonSolverAgent
+from dpc.agents.selector_agent import EquivalenceGrouperAgent
 from dpc.core.pipeline import DPCPipeline
 from dpc.datasets.spider_loader import SpiderLoader
 from dpc.datasets.bird_loader import BirdLoader
@@ -64,7 +65,8 @@ def process_sample(item_data: Dict[str, Any], candidate_sqls: List[str], args: a
         slicer = SlicerAgent(llm)
         tester = TesterAgent(llm)
         solver = PythonSolverAgent(llm)
-        pipeline = DPCPipeline(slicer=slicer, tester=tester, solver=solver)
+        grouper = EquivalenceGrouperAgent(llm)
+        pipeline = DPCPipeline(slicer=slicer, tester=tester, solver=solver, grouper=grouper)
 
         # 3. Run Pipeline
         result = pipeline.run(
@@ -77,7 +79,10 @@ def process_sample(item_data: Dict[str, Any], candidate_sqls: List[str], args: a
             epsilon=args.epsilon,
             max_correction_attempts=args.max_correction_attempts,
             num_test_data=args.num_test_data,
-            num_solver_attempts=args.num_solver_attempts
+            num_solver_attempts=args.num_solver_attempts,
+            num_grouping_attempts=args.num_grouping_attempts,
+            phase1_selection_mode=args.phase1_selection_mode,
+            eval_metric=args.eval_metric
         )
 
         return {
@@ -118,7 +123,22 @@ def main():
     parser.add_argument("--max_correction_attempts", type=int, default=3, help="Max attempts to correct Python solver")
     parser.add_argument("--num_test_data", type=int, default=1, help="Number of test data sets to generate")
     parser.add_argument("--num_solver_attempts", type=int, default=1, help="Number of solver attempts per test data")
-    parser.add_argument("--num_workers", type=int, default=multiprocessing.cpu_count(), help="Number of parallel workers")
+    parser.add_argument("--num_grouping_attempts", type=int, default=1, help="Number of grouping attempts for phase1 llm_prompt SC merging")
+    parser.add_argument(
+        "--eval_metric",
+        type=str,
+        default="bs_f1",
+        choices=["bs_f1", "ex"],
+        help="Verification metric for SQL-vs-proxy scoring: bs_f1 (default) or ex",
+    )
+    parser.add_argument(
+        "--phase1_selection_mode",
+        type=str,
+        default="execution",
+        choices=["execution", "llm_prompt"],
+        help="Phase 1 selection mode: execution clustering or LLM prompt-based selection"
+    )
+    parser.add_argument("--num_workers", type=int, default=8, help="Number of parallel workers")
 
     args = parser.parse_args()
 

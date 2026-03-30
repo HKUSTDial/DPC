@@ -2,6 +2,11 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from .slicer_prompts import SLICER_SYSTEM_PROMPT, SLICER_USER_PROMPT_TEMPLATE, SLICER_RETRY_PROMPT_TEMPLATE
 from .tester_prompts import TESTER_SYSTEM_PROMPT, TESTER_USER_PROMPT_TEMPLATE, TESTER_RETRY_PROMPT_TEMPLATE
 from .solver_prompts import SOLVER_SYSTEM_PROMPT, SOLVER_USER_PROMPT_TEMPLATE, SOLVER_RETRY_PROMPT_TEMPLATE
+from .selector_prompts import (
+    EQUIVALENCE_GROUPER_SYSTEM_PROMPT,
+    EQUIVALENCE_GROUPER_USER_PROMPT_TEMPLATE,
+    EQUIVALENCE_GROUPER_RETRY_PROMPT_TEMPLATE,
+)
 
 if TYPE_CHECKING:
     from ..utils.schema_utils import TableSchema
@@ -172,6 +177,38 @@ class PromptFactory:
         Generates the retry prompt for the PythonSolverAgent.
         """
         return [{"role": "user", "content": SOLVER_RETRY_PROMPT_TEMPLATE.format(error_message=error_message)}]
+
+    @staticmethod
+    def get_equivalence_grouper_prompt(
+        question: str,
+        candidate_sqls: List[str],
+        full_schema_text: str,
+        evidence: Optional[str] = None
+    ) -> List[Dict[str, str]]:
+        """
+        Generates the messages for the EquivalenceGrouperAgent.
+        """
+        evidence_str = f"External Knowledge: {evidence}" if evidence else ""
+        sqls_str = "\n\n".join([f"{i+1}. {sql}" for i, sql in enumerate(candidate_sqls)])
+
+        user_prompt = EQUIVALENCE_GROUPER_USER_PROMPT_TEMPLATE.format(
+            full_schema=full_schema_text,
+            question=question,
+            evidence_str=evidence_str,
+            candidate_sqls=sqls_str
+        )
+
+        return [
+            {"role": "system", "content": EQUIVALENCE_GROUPER_SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt}
+        ]
+
+    @staticmethod
+    def get_equivalence_grouper_retry_prompt(error_message: str) -> List[Dict[str, str]]:
+        """
+        Generates the retry prompt for the EquivalenceGrouperAgent.
+        """
+        return [{"role": "user", "content": EQUIVALENCE_GROUPER_RETRY_PROMPT_TEMPLATE.format(error_message=error_message)}]
 
     # Future agents can be added here:
     # @staticmethod

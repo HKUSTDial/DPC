@@ -1,0 +1,67 @@
+{
+  "status_counts": {
+    "no_challenger": 291,
+    "filtered_both_wrong_vs_gold": 107,
+    "ok": 79,
+    "no_champion": 11,
+    "pipeline_error": 11,
+    "gold_sql_exec_failed": 1
+  },
+  "filtering": {
+    "kept_for_solver_eval": 79,
+    "filtered_both_wrong_vs_gold": 107,
+    "gold_sql_exec_failed": 1
+  },
+  "python_reliability": {
+    "evaluated_samples": 79,
+    "python_correct": 51,
+    "python_reliability_rate": 64.55696202531645
+  },
+  "champion_reliability_ex": {
+    "evaluated_samples": 79,
+    "champion_ex_correct": 49,
+    "champion_reliability_ex_rate": 62.0253164556962
+  },
+  "metric_reliability": {
+    "pearson_corr_proxy_ex_vs_gold_label": 0.12760068385255408,
+    "pearson_corr_proxy_bsf1_vs_gold_label": 0.2186310619012676,
+    "spearman_corr_proxy_ex_vs_gold_label": 0.12760068385255402,
+    "spearman_corr_proxy_bsf1_vs_gold_label": 0.19694460544248465,
+    "better_metric_by_pearson": "bs_f1",
+    "better_metric_by_spearman": "bs_f1"
+  },
+  "joint_outcome_python_vs_sql": {
+    "total": 79,
+    "both_wrong": 7,
+    "both_wrong_rate": 8.860759493670885,
+    "python_correct_sql_wrong": 11,
+    "python_correct_sql_wrong_rate": 13.924050632911392,
+    "python_wrong_sql_correct": 21,
+    "python_wrong_sql_correct_rate": 26.582278481012654,
+    "both_correct": 40,
+    "both_correct_rate": 50.63291139240506
+  },
+  "by_difficulty_python_reliability": {
+    "simple": {
+      "total": 28,
+      "python_correct": 21,
+      "champion_ex_correct": 20,
+      "python_reliability_rate": 75.0,
+      "champion_reliability_ex_rate": 71.42857142857143
+    },
+    "moderate": {
+      "total": 38,
+      "python_correct": 22,
+      "champion_ex_correct": 21,
+      "python_reliability_rate": 57.89473684210527,
+      "champion_reliability_ex_rate": 55.26315789473685
+    },
+    "challenging": {
+      "total": 13,
+      "python_correct": 8,
+      "champion_ex_correct": 8,
+      "python_reliability_rate": 61.53846153846154,
+      "champion_reliability_ex_rate": 61.53846153846154
+    }
+  }
+}

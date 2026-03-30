@@ -1,12 +1,17 @@
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from ..utils.clustering import cluster_sql_candidates, select_champion_and_challenger
+from ..utils.clustering import (
+    cluster_sql_candidates,
+    select_champion_and_challenger,
+    select_champion_and_challenger_from_sql_groups,
+)
 from ..utils.schema_utils import SchemaExtractor, TableSchema
 from ..utils.db_utils import execute_sql_pd
 from ..agents.slicer_agent import SlicerAgent
 from ..agents.tester_agent import TesterAgent
 from ..agents.solver_agent import PythonSolverAgent
+from ..agents.selector_agent import EquivalenceGrouperAgent
 from ..eval.metrics import DPCEvaluator
 
 logger = logging.getLogger(__name__)
@@ -15,10 +20,18 @@ class DPCPipeline:
     """
     The main DPC (Dual-Program Consistency) execution pipeline.
     """
-    def __init__(self, slicer: SlicerAgent, tester: TesterAgent, solver: PythonSolverAgent, llm: Optional[Any] = None):
+    def __init__(
+        self,
+        slicer: SlicerAgent,
+        tester: TesterAgent,
+        solver: PythonSolverAgent,
+        grouper: Optional[EquivalenceGrouperAgent] = None,
+        llm: Optional[Any] = None
+    ):
         self.slicer = slicer
         self.tester = tester
         self.solver = solver
+        self.grouper = grouper
         # Use provided llm or extract from one of the agents
         self.llm = llm or slicer.llm
 
@@ -33,7 +46,10 @@ class DPCPipeline:
         epsilon: float = 0.05,
         max_correction_attempts: int = 3,
         num_test_data: int = 1,
-        num_solver_attempts: int = 1
+        num_solver_attempts: int = 1,
+        num_grouping_attempts: int = 1,
+        phase1_selection_mode: str = "execution",
+        eval_metric: str = "bs_f1"
     ) -> Dict[str, Any]:
         """
         Runs the DPC process with a nested Ensemble mechanism:
@@ -41,13 +57,34 @@ class DPCPipeline:
         - num_solver_attempts: Number of Python solver attempts per test data set.
         """
         self.llm.reset_usage()
+        eval_metric = eval_metric.lower()
+        if eval_metric not in {"bs_f1", "ex"}:
+            raise ValueError(f"Unsupported eval_metric: {eval_metric}. Expected one of ['bs_f1', 'ex'].")
 
         logger.info(f"--- Starting DPC Pipeline for Question: {question[:80]}... ---")
-        
-        # Phase 1: Generation & Clustering (Selection)
-        logger.info(f"Phase 1: Clustering {len(candidate_sqls)} candidate SQLs...")
-        groups = cluster_sql_candidates(db_path, candidate_sqls, timeout=sql_timeout)
-        champion_sql, challenger_sql = select_champion_and_challenger(groups)
+        full_schema = None
+
+        # Phase 1: Selection
+        if phase1_selection_mode == "execution":
+            logger.info(f"Phase 1: Execution-based clustering over {len(candidate_sqls)} candidate SQLs...")
+            groups = cluster_sql_candidates(db_path, candidate_sqls, timeout=sql_timeout)
+            champion_sql, challenger_sql = select_champion_and_challenger(groups)
+        elif phase1_selection_mode == "llm_prompt":
+            if self.grouper is None:
+                raise ValueError("phase1_selection_mode='llm_prompt' requires EquivalenceGrouperAgent in DPCPipeline.")
+            logger.info(f"Phase 1: LLM prompt-based equivalence grouping over {len(candidate_sqls)} candidate SQLs...")
+            full_schema = SchemaExtractor.extract(db_path)
+            grouping = self.grouper.run(
+                question=question,
+                candidate_sqls=candidate_sqls,
+                full_schema=full_schema,
+                evidence=evidence,
+                max_correction_attempts=max_correction_attempts,
+                num_grouping_attempts=num_grouping_attempts
+            )
+            champion_sql, challenger_sql = select_champion_and_challenger_from_sql_groups(grouping["sql_groups"])
+        else:
+            raise ValueError(f"Unsupported phase1_selection_mode: {phase1_selection_mode}")
         
         if not champion_sql:
             logger.error("No valid SQL candidates to process.")
@@ -60,7 +97,8 @@ class DPCPipeline:
         logger.info(f"Duel detected: [Champ] {champion_sql[:60]}... VS [Chall] {challenger_sql[:60]}...")
 
         # Phase 2: Evidence Generation (Schema Slicing - stable context)
-        full_schema = SchemaExtractor.extract(db_path)
+        if full_schema is None:
+            full_schema = SchemaExtractor.extract(db_path)
         try:
             logger.info("Attempting Schema Slicing...")
             sliced_schema = self.slicer.run(
@@ -105,12 +143,12 @@ class DPCPipeline:
                     solver_futures = [
                         solver_pool.submit(
                             self.solver.run,
-                    question=question,
-                    test_data=test_data,
-                    sliced_schema=sliced_schema,
-                    evidence=evidence,
-                    max_correction_attempts=max_correction_attempts,
-                    python_timeout=python_timeout
+                            question=question,
+                            test_data=test_data,
+                            sliced_schema=sliced_schema,
+                            evidence=evidence,
+                            max_correction_attempts=max_correction_attempts,
+                            python_timeout=python_timeout
                         ) for _ in range(num_solver_attempts)
                     ]
                     for i, fut in enumerate(as_completed(solver_futures)):
@@ -125,9 +163,9 @@ class DPCPipeline:
                     return None
 
                 # 4. Voting & Scoring
-                proxy_ground_truth = self._vote_on_python_results(py_results)
-                s1 = DPCEvaluator.evaluate(sql_res_1, proxy_ground_truth)
-                s2 = DPCEvaluator.evaluate(sql_res_2, proxy_ground_truth)
+                proxy_ground_truth = self._vote_on_python_results(py_results, eval_metric=eval_metric)
+                s1 = DPCEvaluator.evaluate(sql_res_1, proxy_ground_truth, metric=eval_metric)
+                s2 = DPCEvaluator.evaluate(sql_res_2, proxy_ground_truth, metric=eval_metric)
                 logger.info(f"{data_prefix} Scores: [Champ] {s1:.4f} | [Chall] {s2:.4f}")
                 
                 # Decide winner for THIS data iteration
@@ -170,7 +208,7 @@ class DPCPipeline:
             logger.info(f"Champion retained. Challenger only won {challenger_wins}/{valid_data_points} rounds.")
             return self._format_result(champion_sql, f"Champion Retained (Votes: {valid_data_points-challenger_wins}/{valid_data_points})", avg_score_1, avg_score_2)
 
-    def _vote_on_python_results(self, py_results: List[Any]) -> Any:
+    def _vote_on_python_results(self, py_results: List[Any], eval_metric: str = "bs_f1") -> Any:
         """
         Majority vote on the results of multiple Python Solver executions.
         Uses DPCEvaluator.evaluate (Soft-F1) to cluster equivalent results.
@@ -194,8 +232,9 @@ class DPCPipeline:
             found_group = False
             for group in groups:
                 # Use our robust metric for comparison
-                score = DPCEvaluator.evaluate(res, group['representative'])
-                if score > 0.99: # Almost identical
+                score = DPCEvaluator.evaluate(res, group['representative'], metric=eval_metric)
+                threshold = 0.99 if eval_metric == "bs_f1" else 1.0
+                if score >= threshold:
                     group['count'] += 1
                     group['members'].append(res)
                     found_group = True
