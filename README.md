@@ -29,9 +29,10 @@ Current LLM-as-a-Judge methods often suffer from the **Oracle Paradox**: to judg
     -   **Process Isolation**: Python code is executed in a secured, timed-out sub-process sandbox.
     -   **Resume Support**: Automatically resumes from the last processed sample if interrupted.
 -   **Configurable & Extensible**:
-    -   Unified TOML-based configuration.
+    -   CLI and environment-variable based configuration.
     -   Standardized support for **Spider** and **BIRD** datasets.
-    -   Robust Soft-F1 evaluation logic (aligned with BIRD official metrics).
+    -   Multiple Phase-1 modes: execution clustering or prompt-based equivalence grouping.
+    -   Verification metrics support both `bs_f1` and `ex`.
 
 ---
 
@@ -43,7 +44,9 @@ We use `uv` for dependency management:
 uv sync
 ```
 
-To run scripts without manually activating the virtual environment, prefer `uv run`:
+This creates a local `.venv/`. The shell wrappers in `scripts/` will also prefer `.venv/bin/python` automatically if it exists.
+
+To run commands without manually activating the virtual environment, prefer `uv run`:
 
 ```bash
 uv run python baseline/run_dpc_selection.py --help
@@ -59,17 +62,25 @@ uv run python baseline/run_dpc_selection.py --help
 
 ## ⚙️ Configuration
 
-We now support command-line arguments for all configurations. You can run the pipeline directly using the provided shell scripts in the `scripts/` directory, which allow you to override settings via environment variables.
+All runtime configuration is exposed through CLI flags or shell environment variables. The `scripts/` wrappers are the recommended entry point for repeatable experiments, and by default they read candidates from `artifacts/candidates/` and write outputs into `artifacts/`.
 
 For example, to run the DPC selection:
 ```bash
-bash scripts/run_dpc_selection.sh
+uv run bash scripts/run_dpc_selection.sh
 ```
 
 Or run the baseline generation:
 ```bash
-bash scripts/run_gen_baseline.sh
+uv run bash scripts/run_gen_baseline.sh
 ```
+
+Common environment variables:
+
+-   `MODEL_NAME`, `API_KEY`, `BASE_URL`: LLM backend configuration.
+-   `ARTIFACT_ROOT`: Root directory for generated local artifacts. Default: `artifacts`.
+-   `PYTHON_BIN`: Override the Python interpreter used by shell wrappers.
+-   `PHASE1_SELECTION_MODE`: `execution` or `llm_prompt` for DPC Phase 1.
+-   `EVAL_METRIC`: `bs_f1` or `ex` for DPC verification scoring.
 
 ---
 
@@ -91,7 +102,31 @@ The system expects a `pred_sqls.json` file containing candidate SQLs generated b
 
 ## 🏃 Running the Pipeline
 
-To process the entire dataset in parallel using the main entry point:
+Typical workflow:
+
+1. Generate candidate SQLs.
+2. Run one of the selection methods.
+3. Evaluate outputs.
+
+Generate candidates:
+
+```bash
+uv run bash scripts/run_gen_baseline.sh
+```
+
+Run DPC selection:
+
+```bash
+uv run bash scripts/run_dpc_selection.sh
+```
+
+Run EX evaluation on predictions:
+
+```bash
+uv run bash scripts/run_eval_ex.sh
+```
+
+You can also call the Python entry point directly when you need full control:
 
 ```bash
 uv run python baseline/run_dpc_selection.py \
@@ -101,12 +136,37 @@ uv run python baseline/run_dpc_selection.py \
     --pred_sqls_path artifacts/candidates/GPT-4o.json \
     --output_path artifacts/selected/DPC_Results.json \
     --model_name gpt-4o \
+    --phase1_selection_mode execution \
+    --eval_metric bs_f1 \
     --num_workers 8
 ```
 
 -   The script will display a progress bar.
 -   Results are saved in real-time to the specified output path in `{"qid": "sql"}` format.
 -   If the process stops, simply re-run the command to resume.
+
+Example: prompt-based Phase 1 grouping instead of execution clustering:
+
+```bash
+uv run python baseline/run_dpc_selection.py \
+    --dataset_type bird \
+    --data_path data/bird/dev/dev.json \
+    --db_root_path data/bird/dev/dev_databases \
+    --pred_sqls_path artifacts/candidates/GPT-4o.json \
+    --output_path artifacts/selected/DPC_Results_prompt_phase1.json \
+    --model_name gpt-4o \
+    --phase1_selection_mode llm_prompt \
+    --num_grouping_attempts 3 \
+    --num_workers 8
+```
+
+Other common entry points:
+
+-   `uv run bash scripts/run_sc_selection.sh`
+-   `uv run bash scripts/run_mcs_selection.sh`
+-   `uv run bash scripts/run_ex_guided_selection.sh`
+-   `uv run bash scripts/run_random_selection.sh`
+-   `uv run bash scripts/run_pass_n_eval.sh`
 
 ---
 
@@ -135,6 +195,7 @@ DPC-SQL/
 ## 📝 Methodology Detail (ACL Workflow)
 
 1.  **Phase 1: Clustering**: Group candidate SQLs by execution result on the original DB and pick the Champion (top-1) and Challenger (top-2).
+    Current implementation also supports an alternative prompt-based equivalence grouping mode via `--phase1_selection_mode llm_prompt`.
 2.  **Phase 2: Evidence Generation**:
     *   **Schema Slicing**: LLM identifies relevant tables/columns. Verified via `LIMIT 0` Dry-Run.
     *   **Differentiator**: LLM generates 3-5 rows of data where SQL1 and SQL2 yield different results.

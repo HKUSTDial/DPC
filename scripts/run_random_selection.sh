@@ -1,7 +1,13 @@
 #!/bin/bash
 
 # --- Configuration ---
-PYTHON_BIN=${PYTHON_BIN:-"python3"}
+if [ -z "${PYTHON_BIN:-}" ]; then
+    if [ -x ".venv/bin/python" ]; then
+        PYTHON_BIN=".venv/bin/python"
+    else
+        PYTHON_BIN="python3"
+    fi
+fi
 ARTIFACT_ROOT=${ARTIFACT_ROOT:-"artifacts"}
 CANDIDATES_PATH=${CANDIDATES_PATH:-"${ARTIFACT_ROOT}/candidates/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev.json"}
 OUTPUT_PATH=${OUTPUT_PATH:-"${ARTIFACT_ROOT}/selected/Qwen2.5-Coder-7B-Instruct_BIRD_Mini_Dev_Random.json"}
