@@ -1,92 +1,286 @@
-# DPC-SQL: Dual-Program Consistency for Text-to-SQL Selection
+<div align="center">
 
-**DPC-SQL** is a robust inference-time selection strategy designed to identify the most logically accurate SQL query from a set of generated candidates. It addresses the "Blind Judge" problem in Text-to-SQL tasks by leveraging the cognitive gap and error independence between two programming paradigms: **SQL (Declarative)** and **Python/Pandas (Imperative)**.
+# DPC-SQL
 
-This project is designed with modularity and robustness in mind, suitable for academic research (e.g., ACL/EMNLP submissions) and large-scale evaluation.
+<p>
+  <b>Dual-Program Consistency for Text-to-SQL Selection</b><br/>
+  ACL 2026 Companion Codebase
+</p>
 
----
+<p>
+  <a href="#-overview">Overview</a> •
+  <a href="#-installation">Installation</a> •
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-reproducing-experiments">Experiments</a> •
+  <a href="#-project-structure">Project Structure</a>
+</p>
 
-## 🌟 Core Insight: The "Independence of Errors"
+<p>
+  ⚖️ SQL-as-candidate selection &nbsp;|&nbsp; 🐍 Python-as-proxy verification &nbsp;|&nbsp; 🧪 Distinguishing synthetic data
+</p>
 
-Current LLM-as-a-Judge methods often suffer from the **Oracle Paradox**: to judge if a SQL result is correct, the LLM must mentally calculate the ground truth, which is exactly what it struggled to do when generating the SQL.
-
-**Dual-Program Consistency (DPC)** breaks this by:
-1.  Identifying logic differences between SQL candidates.
-2.  Synthesizing a minimal **Test Data Slice** where these differences manifest.
-3.  Solving the problem via a different modality (**Python/Pandas**).
-4.  **Triangulation**: If `Result(SQL) == Result(Python)` on the test data, the probability of correctness is significantly higher.
-
----
-
-## 🚀 Key Features
-
--   **Multi-Agent Closed-Loop System**:
-    -   **SlicerAgent**: Compresses the database schema to the minimum necessary context via Dry-Run validation.
-    -   **TesterAgent**: Generates "Distinguishing Test Data" that forces different SQLs to yield different results.
-    -   **PythonSolverAgent**: Implements a multi-turn self-correction loop to write reliable Pandas code.
--   **Production-Grade Batch Processing**:
-    -   **Parallel Execution**: High-concurrency processing using `ProcessPoolExecutor`.
-    -   **Process Isolation**: Python code is executed in a secured, timed-out sub-process sandbox.
-    -   **Resume Support**: Automatically resumes from the last processed sample if interrupted.
--   **Configurable & Extensible**:
-    -   CLI and environment-variable based configuration.
-    -   Standardized support for **Spider** and **BIRD** datasets.
-    -   Multiple Phase-1 modes: execution clustering or prompt-based equivalence grouping.
-    -   Verification metrics support both `bs_f1` and `ex`.
+</div>
 
 ---
 
-## 🛠️ Installation
+## ✨ Overview
 
-We use `uv` for dependency management:
+**DPC-SQL** is an inference-time selection framework for Text-to-SQL.
+Instead of asking an LLM judge to directly decide which SQL is correct, DPC-SQL builds a second reasoning channel in **Python/Pandas**, generates **distinguishing test data**, and compares candidate SQLs against a cross-program proxy answer.
+
+This repository is the research codebase accompanying our ACL 2026 work on **Dual-Program Consistency (DPC)** for Text-to-SQL selection.
+
+<table>
+  <tr>
+    <td><b>Problem</b></td>
+    <td>LLM-as-a-Judge for SQL often suffers from the same reasoning errors as SQL generation itself.</td>
+  </tr>
+  <tr>
+    <td><b>Key Idea</b></td>
+    <td>Validate candidate SQLs through a second program form with different failure modes: Python/Pandas.</td>
+  </tr>
+  <tr>
+    <td><b>What DPC Does</b></td>
+    <td>Pick champion/challenger SQLs, synthesize test data where they diverge, solve the question in Python, and choose the candidate closer to the Python answer.</td>
+  </tr>
+  <tr>
+    <td><b>Scope</b></td>
+    <td>Inference-time selection only. No model finetuning or task-specific training is required.</td>
+  </tr>
+</table>
+
+---
+
+## 🧠 Method At A Glance
+
+1. **Phase 1: Candidate Selection**
+   Group candidate SQLs and identify a **champion** and **challenger**.
+   The codebase currently supports:
+   - `execution`: cluster by execution result on the original DB
+   - `llm_prompt`: group by prompt-based logical equivalence
+
+2. **Phase 2: Schema Slicing**
+   Keep only the tables and columns needed for the duel, then validate the slice with dry-run checks.
+
+3. **Phase 3: Distinguishing Data Generation**
+   Generate a small synthetic database slice where the two SQLs produce different answers.
+
+4. **Phase 4: Cross-Program Verification**
+   Ask a Python solver to answer the same NL question over the synthetic data and compare SQL outputs against the Python result.
+
+5. **Phase 5: Final Decision**
+   Select the SQL that is more consistent with the Python proxy answer.
+
+<details>
+<summary><b>Why this is different from standard self-consistency</b></summary>
+
+Standard self-consistency still votes within the same program form: SQL.
+DPC-SQL explicitly introduces a second program modality with different inductive biases and different error modes, which helps reduce blind voting over the same logical mistake.
+
+</details>
+
+---
+
+## 🚀 What’s Included
+
+- **Main DPC pipeline**
+  - `SlicerAgent`, `TesterAgent`, `PythonSolverAgent`, `EquivalenceGrouperAgent`
+- **Baselines**
+  - SC, MCS, USC, EX-guided, Random
+- **Evaluation utilities**
+  - execution accuracy
+  - Pass@K / candidate upper bound
+  - majority-analysis and solver-reliability analysis
+- **Research-oriented experiment runners**
+  - resumable batch processing
+  - local artifact management under `artifacts/`
+  - checked-in snapshot results under `results/`
+
+---
+
+## 🛠 Installation
+
+This project uses **uv** for dependency management.
 
 ```bash
 uv sync
 ```
 
-This creates a local `.venv/`. The shell wrappers in `scripts/` will also prefer `.venv/bin/python` automatically if it exists.
+That creates a local `.venv/`.
+All shell wrappers in [`scripts/`](./scripts) automatically prefer `.venv/bin/python` if it exists, so after `uv sync` you can usually run them directly with `bash`.
 
-To run commands without manually activating the virtual environment, prefer `uv run`:
+If you want to run Python entry points directly, use:
 
 ```bash
 uv run python baseline/run_dpc_selection.py --help
 ```
 
-**Requirements**:
--   `pandas`, `numpy`: Data processing.
--   `openai`: LLM connectivity.
--   `tabulate`: Visualizing data tables in prompts.
--   `tqdm`: Progress tracking.
+### Dependencies
+
+The main runtime dependencies are:
+
+- `openai`
+- `pandas`
+- `numpy`
+- `scipy`
+- `tabulate`
+- `tqdm`
+- `chardet`
+
+### LLM Backend
+
+The repository uses an **OpenAI-compatible chat API** wrapper.
+You can provide credentials in either of these ways:
+
+- shell wrappers: `API_KEY`, `BASE_URL`
+- direct Python entry points: `--api_key`, `--base_url`
+- fallback env vars used by the LLM wrapper: `OPENAI_API_KEY`, `OPENAI_BASE_URL`
 
 ---
 
 ## ⚙️ Configuration
 
-All runtime configuration is exposed through CLI flags or shell environment variables. The `scripts/` wrappers are the recommended entry point for repeatable experiments, and by default they read candidates from `artifacts/candidates/` and write outputs into `artifacts/`.
+Most experiments are driven by shell wrappers under [`scripts/`](./scripts).
+These wrappers expose configuration through environment variables and write local outputs into `artifacts/` by default.
 
-For example, to run the DPC selection:
-```bash
-uv run bash scripts/run_dpc_selection.sh
-```
+### Common Environment Variables
 
-Or run the baseline generation:
-```bash
-uv run bash scripts/run_gen_baseline.sh
-```
+| Variable | Meaning |
+|---|---|
+| `MODEL_NAME` | LLM model name used by generation / selection / verification |
+| `API_KEY` | API key for the OpenAI-compatible backend |
+| `BASE_URL` | Base URL for the backend |
+| `ARTIFACT_ROOT` | Root directory for generated local outputs, default `artifacts` |
+| `PYTHON_BIN` | Explicit Python interpreter override for shell wrappers |
+| `PHASE1_SELECTION_MODE` | `execution` or `llm_prompt` in DPC |
+| `NUM_GROUPING_ATTEMPTS` | Self-consistency samples for prompt-based SQL grouping |
+| `EVAL_METRIC` | `bs_f1` or `ex` for DPC verification |
 
-Common environment variables:
+### Output Layout
 
--   `MODEL_NAME`, `API_KEY`, `BASE_URL`: LLM backend configuration.
--   `ARTIFACT_ROOT`: Root directory for generated local artifacts. Default: `artifacts`.
--   `PYTHON_BIN`: Override the Python interpreter used by shell wrappers.
--   `PHASE1_SELECTION_MODE`: `execution` or `llm_prompt` for DPC Phase 1.
--   `EVAL_METRIC`: `bs_f1` or `ex` for DPC verification scoring.
+- `artifacts/`: local experiment outputs generated by your runs
+- `results/`: curated or checked-in result snapshots already included in the repository
 
 ---
 
-## 📊 Data Format
+## ⚡ Quick Start
 
-The system expects a `pred_sqls.json` file containing candidate SQLs generated by your base model:
+The default workflow is:
+
+1. Generate candidate SQLs
+2. Run a selector
+3. Evaluate predictions
+
+### 1. Generate Candidate SQLs
+
+```bash
+MODEL_NAME=gpt-5-chat-latest \
+API_KEY=your_api_key \
+BASE_URL=your_base_url \
+bash scripts/run_gen_baseline.sh
+```
+
+This writes candidates to:
+
+```text
+artifacts/candidates/...
+```
+
+### 2. Run DPC Selection
+
+Execution-based Phase 1:
+
+```bash
+MODEL_NAME=gpt-5-chat-latest \
+API_KEY=your_api_key \
+BASE_URL=your_base_url \
+PHASE1_SELECTION_MODE=execution \
+EVAL_METRIC=bs_f1 \
+bash scripts/run_dpc_selection.sh
+```
+
+Prompt-based Phase 1:
+
+```bash
+MODEL_NAME=gpt-5-chat-latest \
+API_KEY=your_api_key \
+BASE_URL=your_base_url \
+PHASE1_SELECTION_MODE=llm_prompt \
+NUM_GROUPING_ATTEMPTS=3 \
+bash scripts/run_dpc_selection.sh
+```
+
+### 3. Evaluate Predictions
+
+Execution accuracy:
+
+```bash
+bash scripts/run_eval_ex.sh
+```
+
+Pass@K over candidate groups:
+
+```bash
+PASS_K=2 bash scripts/run_pass_n_eval.sh
+```
+
+---
+
+## 🔬 Reproducing Experiments
+
+### Main Entry Points
+
+| Goal | Command |
+|---|---|
+| Generate generic candidate SQLs | `bash scripts/run_gen_baseline.sh` |
+| Generate OmniSQL candidates | `bash scripts/run_gen_omnisql.sh` |
+| Generate XiYan candidates | `bash scripts/run_gen_xiyan.sh` |
+| Run DPC | `bash scripts/run_dpc_selection.sh` |
+| Run SC | `bash scripts/run_sc_selection.sh` |
+| Run MCS | `bash scripts/run_mcs_selection.sh` |
+| Run EX-guided baseline | `bash scripts/run_ex_guided_selection.sh` |
+| Run Random baseline | `bash scripts/run_random_selection.sh` |
+| Run EX evaluation | `bash scripts/run_eval_ex.sh` |
+| Run Pass@K evaluation | `bash scripts/run_pass_n_eval.sh` |
+| Compare DPC vs SC over multiple candidate counts | `bash scripts/run_candidates_analysis.sh` |
+
+### Additional Research Utilities
+
+These are useful for deeper analysis and paper ablations:
+
+| Utility | Entry Point |
+|---|---|
+| USC selection | `uv run python baseline/run_usc_selection.py ...` |
+| MCS without execution clustering | `uv run python baseline/run_mcs_selection_wo_execution.py ...` |
+| MDD generation only | `uv run python baseline/run_mdd_generation.py ...` |
+| Post-hoc MDD stats | `uv run python baseline/run_mdd_posthoc_stats.py ...` |
+| Solver reliability analysis | `uv run python baseline/run_solver_reliability_experiment.py ...` |
+| Majority-analysis between SC and DPC | `bash scripts/run_majority_analysis.sh` |
+
+### Direct Python Usage
+
+If you want full control beyond the shell wrappers:
+
+```bash
+uv run python baseline/run_dpc_selection.py \
+  --dataset_type bird \
+  --data_path data/bird/dev/dev.json \
+  --db_root_path data/bird/dev/dev_databases \
+  --pred_sqls_path artifacts/candidates/GPT-4o.json \
+  --output_path artifacts/selected/DPC_Results.json \
+  --model_name gpt-4o \
+  --phase1_selection_mode execution \
+  --eval_metric bs_f1 \
+  --num_workers 8
+```
+
+---
+
+## 📊 Input / Output Format
+
+### Candidate SQL File
+
+The repository expects candidate SQLs in JSON format:
 
 ```json
 {
@@ -94,116 +288,92 @@ The system expects a `pred_sqls.json` file containing candidate SQLs generated b
     "SELECT count(*) FROM head WHERE age > 56",
     "SELECT count(*) FROM head WHERE age >= 56"
   ],
-  "question_id_1": [...]
+  "question_id_1": [
+    "SELECT ..."
+  ]
+}
+```
+
+### Selection Output
+
+Selectors typically write:
+
+```json
+{
+  "question_id_0": "SELECT ..."
+}
+```
+
+### Notes
+
+- DPC and some analysis scripts save incrementally and support resume.
+- `artifacts/` is intended for your local runs.
+- `results/` contains repository snapshots and should not be treated as the default write target.
+
+---
+
+## 🧪 Supported Datasets
+
+The current codebase includes dataset loaders for:
+
+- **BIRD**
+- **Spider**
+
+Relevant modules:
+
+- [`dpc/datasets/bird_loader.py`](./dpc/datasets/bird_loader.py)
+- [`dpc/datasets/spider_loader.py`](./dpc/datasets/spider_loader.py)
+
+---
+
+## 🗂 Project Structure
+
+```text
+DPC-SQL/
+├── artifacts/          # Local experiment outputs (gitignored)
+├── baseline/           # Main runners for generation, baselines, and analysis
+├── data/               # Dataset files and database directories
+├── dpc/
+│   ├── agents/         # Slicer / Tester / Solver / Selector agents
+│   ├── core/           # DPC pipeline orchestration
+│   ├── datasets/       # Spider / BIRD dataset loaders
+│   ├── eval/           # BS-F1 / EX evaluation logic
+│   ├── llm/            # OpenAI-compatible LLM wrapper
+│   ├── prompts/        # Prompt templates
+│   └── utils/          # DB execution, schema extraction, parsing, clustering
+├── evaluation/         # Evaluation scripts
+├── results/            # Checked-in snapshots / curated outputs
+├── scripts/            # Experiment shell wrappers
+├── pyproject.toml      # uv dependency definition
+└── uv.lock             # Reproducible dependency lockfile
+```
+
+---
+
+## 📝 Notes For Paper Release
+
+- This repository is organized as a **research codebase**, not as a packaged library.
+- The preferred user-facing interface is the combination of:
+  - `uv sync`
+  - `bash scripts/...`
+- Prompt-based paths depend on an available OpenAI-compatible LLM backend and may incur API cost.
+
+---
+
+## 📚 Citation
+
+Citation metadata can be added here after the paper metadata is finalized.
+
+```bibtex
+@misc{dpc_sql_2026,
+  title  = {DPC-SQL: Dual-Program Consistency for Text-to-SQL Selection},
+  year   = {2026},
+  note   = {ACL 2026 companion codebase}
 }
 ```
 
 ---
 
-## 🏃 Running the Pipeline
-
-Typical workflow:
-
-1. Generate candidate SQLs.
-2. Run one of the selection methods.
-3. Evaluate outputs.
-
-Generate candidates:
-
-```bash
-uv run bash scripts/run_gen_baseline.sh
-```
-
-Run DPC selection:
-
-```bash
-uv run bash scripts/run_dpc_selection.sh
-```
-
-Run EX evaluation on predictions:
-
-```bash
-uv run bash scripts/run_eval_ex.sh
-```
-
-You can also call the Python entry point directly when you need full control:
-
-```bash
-uv run python baseline/run_dpc_selection.py \
-    --dataset_type bird \
-    --data_path data/bird/dev/dev.json \
-    --db_root_path data/bird/dev/dev_databases \
-    --pred_sqls_path artifacts/candidates/GPT-4o.json \
-    --output_path artifacts/selected/DPC_Results.json \
-    --model_name gpt-4o \
-    --phase1_selection_mode execution \
-    --eval_metric bs_f1 \
-    --num_workers 8
-```
-
--   The script will display a progress bar.
--   Results are saved in real-time to the specified output path in `{"qid": "sql"}` format.
--   If the process stops, simply re-run the command to resume.
-
-Example: prompt-based Phase 1 grouping instead of execution clustering:
-
-```bash
-uv run python baseline/run_dpc_selection.py \
-    --dataset_type bird \
-    --data_path data/bird/dev/dev.json \
-    --db_root_path data/bird/dev/dev_databases \
-    --pred_sqls_path artifacts/candidates/GPT-4o.json \
-    --output_path artifacts/selected/DPC_Results_prompt_phase1.json \
-    --model_name gpt-4o \
-    --phase1_selection_mode llm_prompt \
-    --num_grouping_attempts 3 \
-    --num_workers 8
-```
-
-Other common entry points:
-
--   `uv run bash scripts/run_sc_selection.sh`
--   `uv run bash scripts/run_mcs_selection.sh`
--   `uv run bash scripts/run_ex_guided_selection.sh`
--   `uv run bash scripts/run_random_selection.sh`
--   `uv run bash scripts/run_pass_n_eval.sh`
-
----
-
-## 📂 Project Structure
-
-```text
-DPC-SQL/
-├── artifacts/          # Local experiment outputs (gitignored)
-├── dpc/
-│   ├── agents/         # LLM Agents (Slicer, Tester, Solver)
-│   ├── core/           # Main Pipeline logic
-│   ├── datasets/       # Spider/BIRD Loaders
-│   ├── eval/           # Soft-F1 Metrics
-│   ├── prompts/        # Standardized Prompt Templates & Factory
-│   └── utils/          # DB utils, Python Sandbox, Clustering
-├── baseline/           # Baseline scripts (SC, DPC, LLM-Selection)
-├── evaluation/         # Evaluation scripts (Execution Accuracy)
-├── pyproject.toml      # uv project/dependency definition
-├── results/            # Checked-in snapshots / curated result files
-├── scripts/            # Helper shell scripts for running experiments
-└── uv.lock             # uv lockfile
-```
-
----
-
-## 📝 Methodology Detail (ACL Workflow)
-
-1.  **Phase 1: Clustering**: Group candidate SQLs by execution result on the original DB and pick the Champion (top-1) and Challenger (top-2).
-    Current implementation also supports an alternative prompt-based equivalence grouping mode via `--phase1_selection_mode llm_prompt`.
-2.  **Phase 2: Evidence Generation**:
-    *   **Schema Slicing**: LLM identifies relevant tables/columns. Verified via `LIMIT 0` Dry-Run.
-    *   **Differentiator**: LLM generates 3-5 rows of data where SQL1 and SQL2 yield different results.
-3.  **Phase 3: Verification**: Python Solver writes Pandas code to solve the NL query on the generated data slice.
-4.  **Phase 4: Decision**: The SQL that matches the Python result (Soft-F1) more closely wins.
-
----
-
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is released under the MIT License.
