@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>DPC-SQL</h1>
+<h1>DPC</h1>
 
 <p>
   <strong>DPC: Training-Free Text-to-SQL Candidate Selection via Dual-Paradigm Consistency</strong>
@@ -53,7 +53,7 @@
 
 ## ✨ Overview
 
-**DPC-SQL** is a research codebase for **inference-time** Text-to-SQL candidate selection.
+**DPC** is a training-free method for **inference-time** Text-to-SQL candidate selection.
 Instead of asking an LLM judge to directly decide which SQL is correct, DPC introduces a second reasoning channel in **Python/Pandas**, constructs a **Minimal Distinguishing Database (MDD)**, and chooses the SQL candidate whose execution is more consistent with the Python solution.
 
 > DPC reframes SQL selection from "guess which candidate is right on hidden data" into "verify which candidate survives on visible distinguishing data."
