@@ -1,51 +1,81 @@
 <div align="center">
 
-# DPC-SQL
+<h1>DPC-SQL</h1>
 
 <p>
-  <b>Dual-Program Consistency for Text-to-SQL Selection</b><br/>
-  ACL 2026 Companion Codebase
+  <strong>DPC: Training-Free Text-to-SQL Candidate Selection via Dual-Paradigm Consistency</strong>
 </p>
 
 <p>
+  Official research code for our ACL 2026 Main Track paper
+</p>
+
+<p>
+  Boyan Li · Ou Ocean Kun Hei · Yue Yu · Yuyu Luo
+</p>
+
+<p>
+  <a href="https://arxiv.org/abs/2604.15163">
+    <img src="https://img.shields.io/badge/Paper-arXiv%3A2604.15163-b31b1b?logo=arxiv&logoColor=white" alt="Paper: arXiv 2604.15163" />
+  </a>
+  <img src="https://img.shields.io/badge/Venue-ACL%202026%20Main%20Track-1f6feb" alt="Venue: ACL 2026 Main Track" />
+  <img src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white" alt="Python 3.10+" />
+  <img src="https://img.shields.io/badge/Package-uv-6C47FF" alt="Package manager: uv" />
+</p>
+
+<p>
+  <a href="https://arxiv.org/abs/2604.15163">Paper</a> •
   <a href="#-overview">Overview</a> •
   <a href="#-installation">Installation</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-reproducing-experiments">Experiments</a> •
-  <a href="#-project-structure">Project Structure</a>
-</p>
-
-<p>
-  ⚖️ SQL-as-candidate selection &nbsp;|&nbsp; 🐍 Python-as-proxy verification &nbsp;|&nbsp; 🧪 Distinguishing synthetic data
+  <a href="#-citation">Citation</a>
 </p>
 
 </div>
+
+<table>
+  <tr>
+    <td align="center"><b>Task</b><br/>Training-free Text-to-SQL candidate selection</td>
+    <td align="center"><b>Core Idea</b><br/>Verify SQL with a Python/Pandas solution on a minimal distinguishing database</td>
+    <td align="center"><b>Outcome</b><br/>Reduce selection errors caused by shared LLM blind spots and self-consistency bias</td>
+  </tr>
+</table>
+
+---
+
+## 🔔 News
+
+- `2026-04-17`: Our paper is available on arXiv: [2604.15163](https://arxiv.org/abs/2604.15163).
+- `2026`: DPC is accepted to **ACL 2026 Main Track**.
 
 ---
 
 ## ✨ Overview
 
-**DPC-SQL** is an inference-time selection framework for Text-to-SQL.
-Instead of asking an LLM judge to directly decide which SQL is correct, DPC-SQL builds a second reasoning channel in **Python/Pandas**, generates **distinguishing test data**, and compares candidate SQLs against a cross-program proxy answer.
+**DPC-SQL** is a research codebase for **inference-time** Text-to-SQL candidate selection.
+Instead of asking an LLM judge to directly decide which SQL is correct, DPC introduces a second reasoning channel in **Python/Pandas**, constructs a **Minimal Distinguishing Database (MDD)**, and chooses the SQL candidate whose execution is more consistent with the Python solution.
 
-This repository is the research codebase accompanying our ACL 2026 work on **Dual-Program Consistency (DPC)** for Text-to-SQL selection.
+> DPC reframes SQL selection from "guess which candidate is right on hidden data" into "verify which candidate survives on visible distinguishing data."
+
+This repository accompanies the paper **[DPC: Training-Free Text-to-SQL Candidate Selection via Dual-Paradigm Consistency](https://arxiv.org/abs/2604.15163)**, which reports consistent gains on **BIRD** and **Spider**, including up to **+2.2 absolute accuracy** over strong training-free baselines.
 
 <table>
   <tr>
     <td><b>Problem</b></td>
-    <td>LLM-as-a-Judge for SQL often suffers from the same reasoning errors as SQL generation itself.</td>
+    <td>LLM-as-a-Judge for SQL often shares the same reasoning failures as SQL generation itself.</td>
   </tr>
   <tr>
     <td><b>Key Idea</b></td>
-    <td>Validate candidate SQLs through a second program form with different failure modes: Python/Pandas.</td>
+    <td>Cross-check candidate SQLs with a second program form that has different failure modes: Python/Pandas.</td>
   </tr>
   <tr>
-    <td><b>What DPC Does</b></td>
-    <td>Pick champion/challenger SQLs, synthesize test data where they diverge, solve the question in Python, and choose the candidate closer to the Python answer.</td>
+    <td><b>Verification Target</b></td>
+    <td>Construct a Minimal Distinguishing Database where competing SQLs diverge, then compare them against a Python answer.</td>
   </tr>
   <tr>
     <td><b>Scope</b></td>
-    <td>Inference-time selection only. No model finetuning or task-specific training is required.</td>
+    <td>Inference-time selection only. No task-specific finetuning or verifier training is required.</td>
   </tr>
 </table>
 
@@ -53,29 +83,29 @@ This repository is the research codebase accompanying our ACL 2026 work on **Dua
 
 ## 🧠 Method At A Glance
 
-1. **Phase 1: Candidate Selection**
+1. **Candidate Selection**
    Group candidate SQLs and identify a **champion** and **challenger**.
-   The codebase currently supports:
-   - `execution`: cluster by execution result on the original DB
+   Supported grouping modes:
+   - `execution`: cluster by execution result on the original database
    - `llm_prompt`: group by prompt-based logical equivalence
 
-2. **Phase 2: Schema Slicing**
+2. **Schema Slicing**
    Keep only the tables and columns needed for the duel, then validate the slice with dry-run checks.
 
-3. **Phase 3: Distinguishing Data Generation**
-   Generate a small synthetic database slice where the two SQLs produce different answers.
+3. **Minimal Distinguishing Database Construction**
+   Generate a compact synthetic database slice where the two SQLs produce different answers.
 
-4. **Phase 4: Cross-Program Verification**
-   Ask a Python solver to answer the same NL question over the synthetic data and compare SQL outputs against the Python result.
+4. **Cross-Paradigm Verification**
+   Ask a Python solver to answer the same NL question over the synthetic data and compare both SQL outputs against the Python result.
 
-5. **Phase 5: Final Decision**
-   Select the SQL that is more consistent with the Python proxy answer.
+5. **Final Decision**
+   Select the SQL candidate that is more consistent with the Python proxy answer.
 
 <details>
 <summary><b>Why this is different from standard self-consistency</b></summary>
 
 Standard self-consistency still votes within the same program form: SQL.
-DPC-SQL explicitly introduces a second program modality with different inductive biases and different error modes, which helps reduce blind voting over the same logical mistake.
+DPC explicitly introduces a second program modality with different inductive biases and failure modes, which helps avoid consensus over the same logical mistake.
 
 </details>
 
@@ -85,16 +115,16 @@ DPC-SQL explicitly introduces a second program modality with different inductive
 
 - **Main DPC pipeline**
   - `SlicerAgent`, `TesterAgent`, `PythonSolverAgent`, `EquivalenceGrouperAgent`
-- **Baselines**
+- **Training-free baselines**
   - SC, MCS, USC, EX-guided, Random
 - **Evaluation utilities**
   - execution accuracy
   - Pass@K / candidate upper bound
   - majority-analysis and solver-reliability analysis
-- **Research-oriented experiment runners**
+- **Research-oriented runners**
   - resumable batch processing
   - local artifact management under `artifacts/`
-  - checked-in snapshot results under `results/`
+  - checked-in result snapshots under `results/`
 
 ---
 
@@ -106,7 +136,7 @@ This project uses **uv** for dependency management.
 uv sync
 ```
 
-That creates a local `.venv/`.
+This creates a local `.venv/`.
 All shell wrappers in [`scripts/`](./scripts) automatically prefer `.venv/bin/python` if it exists, so after `uv sync` you can usually run them directly with `bash`.
 
 If you want to run Python entry points directly, use:
@@ -350,10 +380,10 @@ DPC-SQL/
 
 ---
 
-## 📝 Notes For Paper Release
+## 📝 Notes
 
 - This repository is organized as a **research codebase**, not as a packaged library.
-- The preferred user-facing interface is the combination of:
+- The preferred user-facing workflow is:
   - `uv sync`
   - `bash scripts/...`
 - Prompt-based paths depend on an available OpenAI-compatible LLM backend and may incur API cost.
@@ -362,18 +392,27 @@ DPC-SQL/
 
 ## 📚 Citation
 
-Citation metadata can be added here after the paper metadata is finalized.
+If you find this repository useful, please cite our paper.
+Until the ACL Anthology entry is available, we recommend using the arXiv-form BibTeX below.
 
 ```bibtex
-@misc{dpc_sql_2026,
-  title  = {DPC-SQL: Dual-Program Consistency for Text-to-SQL Selection},
-  year   = {2026},
-  note   = {ACL 2026 companion codebase}
+@misc{li2026dpc,
+  title         = {DPC: Training-Free Text-to-SQL Candidate Selection via Dual-Paradigm Consistency},
+  author        = {Boyan Li and Ou Ocean Kun Hei and Yue Yu and Yuyu Luo},
+  year          = {2026},
+  eprint        = {2604.15163},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.DB},
+  doi           = {10.48550/arXiv.2604.15163},
+  url           = {https://arxiv.org/abs/2604.15163},
+  note          = {Accepted to ACL 2026 Main Track}
 }
 ```
+
+Paper link: [https://arxiv.org/abs/2604.15163](https://arxiv.org/abs/2604.15163)
 
 ---
 
 ## 📄 License
 
-This project is released under the MIT License.
+This project is released under the MIT License. See [`LICENSE`](./LICENSE) for details.
