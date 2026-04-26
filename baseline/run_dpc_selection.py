@@ -4,7 +4,6 @@ import json
 import logging
 import argparse
 import multiprocessing
-import signal
 from typing import List, Dict, Any
 
 # 1. IMMEDIATE LOGGING CONFIGURATION (Must be at the very top)
@@ -35,6 +34,7 @@ from baseline.common import (
     iter_dataset_with_candidates,
     load_candidate_map,
     save_json_atomic,
+    terminate_executor_workers,
 )
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
@@ -232,11 +232,8 @@ def main():
                 logger.error(f"Failed to save real-time results for ID {qid}: {e}")
     except KeyboardInterrupt:
         logger.warning("\nInterrupted by user. Terminating all processes forcefully...")
+        terminate_executor_workers(executor)
         executor.shutdown(wait=False, cancel_futures=True)
-        try:
-            os.killpg(0, signal.SIGKILL)
-        except Exception:
-            os._exit(1)
     finally:
         executor.shutdown(wait=True)
 

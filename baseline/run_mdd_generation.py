@@ -4,7 +4,6 @@ import json
 import logging
 import argparse
 import multiprocessing
-import signal
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Dict, Any, List, Optional
 
@@ -33,6 +32,7 @@ from baseline.common import (
     load_candidate_map,
     save_json,
     save_json_atomic,
+    terminate_executor_workers,
 )
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.agents.slicer_agent import SlicerAgent
@@ -352,11 +352,8 @@ def main() -> None:
                     logger.error("Failed to save output for %s: %s", qid, e)
         except KeyboardInterrupt:
             logger.warning("Interrupted by user. Terminating workers...")
+            terminate_executor_workers(executor)
             executor.shutdown(wait=False, cancel_futures=True)
-            try:
-                os.killpg(0, signal.SIGKILL)
-            except Exception:
-                os._exit(1)
         finally:
             executor.shutdown(wait=True)
 

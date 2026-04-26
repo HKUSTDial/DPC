@@ -9,6 +9,8 @@ from typing import List, Dict, Any
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from baseline.common import save_json
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger("Random-Selection")
@@ -42,12 +44,9 @@ def main():
         selected_sqls[qid] = random.choice(candidates)
 
     # 4. Save Results
-    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
-    with open(args.output_path, 'w', encoding='utf-8') as f:
-        json.dump(selected_sqls, f, indent=4, ensure_ascii=False)
+    save_json(args.output_path, selected_sqls, indent=4)
     
     logger.info(f"Random selection complete. Selected SQLs saved to {args.output_path}")
 
 if __name__ == "__main__":
     main()
-

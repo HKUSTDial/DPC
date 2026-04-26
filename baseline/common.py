@@ -67,6 +67,25 @@ def init_worker_ignore_sigint() -> None:
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
+def terminate_executor_workers(executor: Any) -> None:
+    """
+    Best-effort targeted shutdown for ProcessPoolExecutor workers.
+
+    This avoids killing the whole process group on Ctrl-C, which can also take
+    down the parent shell or unrelated processes launched in the same group.
+    """
+    processes = list((getattr(executor, "_processes", None) or {}).values())
+    for proc in processes:
+        if proc.is_alive():
+            proc.terminate()
+    for proc in processes:
+        proc.join(timeout=1)
+    for proc in processes:
+        if proc.is_alive():
+            proc.kill()
+            proc.join(timeout=1)
+
+
 def build_llm_config(args) -> Dict[str, Any]:
     config = {
         "model_name": args.model_name,
