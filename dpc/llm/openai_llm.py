@@ -1,11 +1,5 @@
 import os
-import json
 import time
-import logging
-from typing import List, Dict, Any, Optional
-import openai
-from .base_llm import BaseLLM
-
 import logging
 from typing import List, Dict, Any, Optional
 import openai
@@ -57,8 +51,10 @@ class OpenAILLM(BaseLLM):
                 
                 # Track token usage
                 if response.usage:
-                    self.total_prompt_tokens += response.usage.prompt_tokens
-                    self.total_completion_tokens += response.usage.completion_tokens
+                    self._add_usage(
+                        prompt_tokens=response.usage.prompt_tokens,
+                        completion_tokens=response.usage.completion_tokens
+                    )
 
                 content = response.choices[0].message.content.strip()
                 logger.debug(f"LLM Response (Attempt {attempt + 1}): {content}")
@@ -70,4 +66,3 @@ class OpenAILLM(BaseLLM):
                     time.sleep(self.retry_delay * (attempt + 1)) # Exponential backoff
         
         raise RuntimeError(f"Failed to get response from LLM after {self.max_retries} attempts. Last error: {last_exception}")
-
