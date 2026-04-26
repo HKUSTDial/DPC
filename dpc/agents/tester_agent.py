@@ -4,6 +4,7 @@ from .base_agent import BaseAgent
 from ..prompts.factory import PromptFactory
 from ..utils.schema_utils import TableSchema, SchemaExtractor
 from ..eval.metrics import DPCEvaluator
+from ..utils.db_utils import ensure_readonly_query
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +111,14 @@ class TesterAgent(BaseAgent):
             
             # 2. Execute SQL 1
             try:
+                ensure_readonly_query(sql_1)
                 res1 = pd.read_sql_query(sql_1, conn)
             except Exception as e:
                 return f"SQL 1 failed to execute on generated data: {str(e)}"
                 
             # 3. Execute SQL 2
             try:
+                ensure_readonly_query(sql_2)
                 res2 = pd.read_sql_query(sql_2, conn)
             except Exception as e:
                 return f"SQL 2 failed to execute on generated data: {str(e)}"
@@ -196,4 +199,3 @@ class TesterAgent(BaseAgent):
             raise ValueError(feedback)
                     
         return aligned_data
-

@@ -3,6 +3,7 @@ from typing import List, Dict, Any, Optional
 from .base_agent import BaseAgent
 from ..prompts.factory import PromptFactory
 from ..utils.schema_utils import TableSchema, SchemaExtractor
+from ..utils.db_utils import ensure_readonly_query
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +120,7 @@ class SlicerAgent(BaseAgent):
             # Test each SQL
             for i, sql in enumerate(sqls):
                 try:
+                    ensure_readonly_query(sql)
                     # 1. Use EXPLAIN to validate the SQL against the sliced schema.
                     # No need for complex cleaning because we're prefixing, not appending.
                     # We just strip whitespace to be clean.
@@ -194,4 +196,3 @@ class SlicerAgent(BaseAgent):
                         table.foreign_keys.append(fk)
                     
         return sliced_schema
-

@@ -46,7 +46,7 @@ from dpc.utils.clustering import (
 )
 from dpc.utils.schema_utils import SchemaExtractor
 from dpc.eval.metrics import DPCEvaluator
-from dpc.utils.db_utils import execute_sql
+from dpc.utils.db_utils import ensure_readonly_query, execute_sql
 from dpc.utils.response_parser import extract_result_block, parse_json_response
 
 
@@ -95,6 +95,7 @@ def _execute_sql_on_data(sql: str, test_data: Dict[str, List[Dict[str, Any]]], t
     timer = threading.Timer(timeout, conn.interrupt)
     timer.start()
     try:
+        ensure_readonly_query(sql)
         for table_name, rows in test_data.items():
             pd.DataFrame(rows).to_sql(table_name, conn, index=False)
         return pd.read_sql_query(sql, conn)

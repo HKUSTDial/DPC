@@ -7,7 +7,7 @@ from ..utils.clustering import (
     select_champion_and_challenger_from_sql_groups,
 )
 from ..utils.schema_utils import SchemaExtractor, TableSchema
-from ..utils.db_utils import execute_sql_pd
+from ..utils.db_utils import ensure_readonly_query
 from ..agents.slicer_agent import SlicerAgent
 from ..agents.tester_agent import TesterAgent
 from ..agents.solver_agent import PythonSolverAgent
@@ -271,6 +271,7 @@ class DPCPipeline:
         timer.start()
         
         try:
+            ensure_readonly_query(sql)
             for table_name, rows in test_data.items():
                 pd.DataFrame(rows).to_sql(table_name, conn, index=False)
             
@@ -294,4 +295,3 @@ class DPCPipeline:
             "challenger_score": s2,
             "token_usage": usage
         }
-

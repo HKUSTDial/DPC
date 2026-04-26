@@ -3,8 +3,6 @@ import sys
 import json
 import argparse
 import logging
-import sqlite3
-import threading
 import multiprocessing
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
@@ -15,6 +13,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dpc.datasets.spider_loader import SpiderLoader
 from dpc.datasets.bird_loader import BirdLoader
+from dpc.utils.db_utils import execute_sql as execute_sql_rows
+from baseline.common import save_json
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,25 +24,11 @@ def execute_sql(sql: str, db_path: str, timeout: int = 30) -> Optional[set]:
     """Executes SQL and returns the result set as a set of tuples."""
     if not sql:
         return None
-    conn = None
-    timer = None
     try:
-        conn = sqlite3.connect(db_path)
-        # Use a timer thread to interrupt long-running queries
-        timer = threading.Timer(timeout, conn.interrupt)
-        timer.start()
-        
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        results = cursor.fetchall()
+        results = execute_sql_rows(db_path, sql, timeout=timeout)
         return set(tuple(row) for row in results)
     except Exception:
         return None
-    finally:
-        if timer:
-            timer.cancel()
-        if conn:
-            conn.close()
 
 def process_sample(task: Dict[str, Any]) -> Dict[str, Any]:
     """Worker function to process a single sample."""
@@ -277,9 +263,7 @@ def main():
     }
     
     # 11. Save Results
-    os.makedirs(os.path.dirname(args.output_path), exist_ok=True)
-    with open(args.output_path, 'w', encoding='utf-8') as f:
-        json.dump(output, f, indent=4, ensure_ascii=False)
+    save_json(args.output_path, output, indent=4)
     
     # 12. Print Table
     logger.info("")
@@ -310,4 +294,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

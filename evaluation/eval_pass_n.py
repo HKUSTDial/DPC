@@ -3,8 +3,6 @@ import sys
 import json
 import argparse
 import logging
-import sqlite3
-import threading
 import multiprocessing
 from collections import Counter, defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -16,6 +14,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dpc.datasets.spider_loader import SpiderLoader
 from dpc.datasets.bird_loader import BirdLoader
+from dpc.utils.db_utils import execute_sql as execute_sql_rows
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -28,24 +27,11 @@ def execute_sql(sql: str, db_path: str, timeout: int = 30) -> Optional[Set[Tuple
     """
     if not sql:
         return None
-    conn = None
-    timer = None
     try:
-        conn = sqlite3.connect(db_path)
-        timer = threading.Timer(timeout, conn.interrupt)
-        timer.start()
-        
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        results = cursor.fetchall()
+        results = execute_sql_rows(db_path, sql, timeout=timeout)
         return set(tuple(row) for row in results)
     except Exception:
         return None
-    finally:
-        if timer:
-            timer.cancel()
-        if conn:
-            conn.close()
 
 def process_sample_pass_n(task: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -170,4 +156,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

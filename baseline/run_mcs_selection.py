@@ -2,8 +2,6 @@ import os
 import sys
 import argparse
 import logging
-import sqlite3
-import threading
 import time
 from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -24,6 +22,7 @@ from baseline.common import (
 from dpc.llm.openai_llm import OpenAILLM
 from dpc.utils.schema_utils import SchemaExtractor
 from dpc.utils.response_parser import parse_json_response
+from dpc.utils.db_utils import execute_sql as execute_sql_rows
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -39,26 +38,13 @@ def execute_sql_with_time(sql: str, db_path: str, timeout: int = 30) -> Tuple[Op
     """Executes SQL and returns the result set and execution time."""
     if not sql:
         return None, 0.0
-    conn = None
-    timer = None
     start_time = time.time()
     try:
-        conn = sqlite3.connect(db_path)
-        timer = threading.Timer(timeout, conn.interrupt)
-        timer.start()
-        
-        cursor = conn.cursor()
-        cursor.execute(sql)
-        results = cursor.fetchall()
+        results = execute_sql_rows(db_path, sql, timeout=timeout)
         execution_time = time.time() - start_time
         return frozenset(tuple(row) for row in results), execution_time
     except Exception:
         return None, 0.0
-    finally:
-        if timer:
-            timer.cancel()
-        if conn:
-            conn.close()
 
 def get_mcs_prompt(schema_text: str, question: str, candidates: List[str], evidence: Optional[str] = None) -> str:
     """Constructs the MCQ prompt for the LLM."""
