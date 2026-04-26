@@ -2,10 +2,25 @@ import pandas as pd
 import traceback
 import sys
 import logging
-import threading
+import multiprocessing
 from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
+
+
+def _run_generated_code_worker(
+    test_data: Dict[str, List[Dict[str, Any]]],
+    clean_code: str,
+    conn: Any
+) -> None:
+    try:
+        result = PythonExecutor._execute_clean_code(test_data, clean_code)
+        conn.send(("ok", result))
+    except BaseException:
+        conn.send(("error", traceback.format_exc()))
+    finally:
+        conn.close()
+
 
 class PythonExecutor:
     """
@@ -15,7 +30,7 @@ class PythonExecutor:
     @staticmethod
     def execute(test_data: Dict[str, List[Dict[str, Any]]], code: str, timeout: int = 30) -> Any:
         """
-        Executes code directly using exec().
+        Executes code in a child process so the timeout can be enforced.
         """
         clean_code = code.strip()
         if clean_code.startswith("```python"):
@@ -24,6 +39,32 @@ class PythonExecutor:
             clean_code = clean_code[:-3]
         clean_code = clean_code.strip()
 
+        ctx_name = "fork" if "fork" in multiprocessing.get_all_start_methods() else "spawn"
+        ctx = multiprocessing.get_context(ctx_name)
+        parent_conn, child_conn = ctx.Pipe(duplex=False)
+        proc = ctx.Process(target=_run_generated_code_worker, args=(test_data, clean_code, child_conn))
+        proc.start()
+        child_conn.close()
+
+        try:
+            if parent_conn.poll(timeout):
+                status, result = parent_conn.recv()
+                proc.join(timeout=1)
+                if status == "ok":
+                    return result
+                return result
+
+            proc.terminate()
+            proc.join(timeout=1)
+            if proc.is_alive():
+                proc.kill()
+                proc.join(timeout=1)
+            return f"Error: Python execution timed out after {timeout} seconds."
+        finally:
+            parent_conn.close()
+
+    @staticmethod
+    def _execute_clean_code(test_data: Dict[str, List[Dict[str, Any]]], clean_code: str) -> Any:
         # 1. Prepare local namespace with DataFrames
         # Sanitize table names: replace spaces with underscores to make them valid Python identifiers
         local_vars = {"pd": pd}
